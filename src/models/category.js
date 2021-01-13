@@ -8,8 +8,12 @@ const categoryScehma = new mongoose.Schema({
     slug:{
         type: String,
         required:true,
-        trim: true
+        unique: true
     },
+    type: {
+        type: String
+    },
+    categoryImages: { type: String },
     parentId:{
         type: String,
     }

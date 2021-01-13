@@ -47,10 +47,10 @@ const userSchema = new mongoose.Schema({
     }
 },{timestamps: true});
 
-userSchema.virtual('password').set(function(password){
-    this.set({hash_password:bcrypt.hashSync(password,10)});
-    console.log(this.hash_password);
-});
+//userSchema.virtual('password').set(function(password){
+//    this.set({hash_password:bcrypt.hashSync(password,10)});
+//    console.log(this.hash_password);
+//});
 
 userSchema.virtual('fullName').get(function(pwd){
     console.log("This has been read")

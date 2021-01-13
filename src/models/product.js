@@ -1,46 +1,112 @@
-const mongoose = require('mongoose');
-const productScehma = new mongoose.Schema({
-    name:{
-        type: String,
-        required:true,
-        trim: true
+const mongoose = require("mongoose");
+
+const reviewScehma = new mongoose.Schema({
+  name: { type: String, required: true },
+  rating: { type: Number, default: 0 },
+  comment: { type: String, required: true },
+  review_date: { type: String },
+});
+
+const productScehma = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    slug:{
-        type: String,
-        required:true,
-        trim: true
+    slug: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    price:{
-        type: Number,
-        required:true
+    price: {
+      type: Number,
+      required: true,
     },
-    description:{
-        type: String,
-        required:true,
-        trim: true
+    description: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    offer:{
-        type: Number
+    offer: {
+      type: Number,
     },
-    productImages: [{
-        img:{ type: String }
-    }],
-    quantity:{
-        type: String,
-        required:true
+    productImages: [
+      {
+        img: { type: String },
+      },
+    ],
+    quantity: {
+      type: Number,
+      required: true,
     },
-    reviews:[{
-        type: mongoose.Schema.Types.ObjectId, ref:'User',
-        review: String
-    }],
-    category:{
-        type: mongoose.Schema.Types.ObjectId, ref:'Category',
-        required:true
+    rating: { type: Number, default: 0, required: true },
+    numReviews: { type: Number, default: 0, required: true },
+    reviews: [reviewScehma],
+    specifications: [
+      {
+        specName: {
+          type: String,
+        },
+        specValue: {
+          type: String,
+        },
+      },
+    ],
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: true,
     },
-    createdBy:{
-        type: mongoose.Schema.Types.ObjectId, ref: 'User'
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
     updatedAt: Date,
-},{timestamps :true});
+  },
+  { timestamps: true }
+);
 
-module.exports = mongoose.model('Product',productScehma);
+module.exports = mongoose.model("Product", productScehma);
+
+/* 
+            dimensions: {
+                type: String
+            },
+            weight: {
+                type: String
+            },
+            displayType: {
+                type: String
+            },
+            displaySize: {
+                type: String
+            },
+            displayResolution: {
+                type: String
+            },
+            os: {
+                type: String
+            },
+            cpu: {
+                type: String
+            },
+            internalMemory: {
+                type: String
+            },
+            ram: {
+                type: String
+            },
+            camera: {
+                type: String
+            },
+            battery: {
+                type: String
+            },
+            color: {
+                type: String
+            },
+            brand: {
+                type: String
+            },
+            */

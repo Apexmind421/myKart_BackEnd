@@ -4,7 +4,7 @@
   "description": "This is backend of ecommerce project",
   "main": "index.js",
   "scripts": {
-    "test": "nodemon ./src/index.server.js"
+    "test": "node ./src/index.server.js"
   },
   "keywords": [
     "ecommerce",
