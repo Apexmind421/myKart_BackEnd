@@ -199,9 +199,13 @@ exports.removeItemFromCart = (req, res) => {
 
 exports.DisplayItemsInCart = (req, res) => {
   Cart.findOne({ user: req.user._id }).exec((error, cart) => {
+    console.log("I am inside1");
     if (error) return res.status(400).json({ error });
     if (cart) {
+      console.log("I am inside2");
       return res.status(200).json({ cart });
+    } else {
+      return res.status(202).json({});
     }
   });
 };
