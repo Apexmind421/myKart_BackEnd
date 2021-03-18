@@ -9,6 +9,7 @@ const adminAuthRoutes = require("./routes/admin/auth");
 const catRoutes = require("./routes/category");
 const prodRoutes = require("./routes/product");
 const cartRoutes = require("./routes/cart");
+const favoriteRoutes = require("./routes/favorite");
 const pageRoutes = require("./routes/admin/page");
 const addressRoutes = require("./routes/address");
 const initialDataRoutes = require("./routes/admin/initialData");
@@ -47,6 +48,7 @@ app.use("/api", pageRoutes);
 app.use("/api", addressRoutes);
 app.use("/api", initialDataRoutes);
 app.use("/api", orderRoutes);
+app.use("/api", favoriteRoutes);
 
 // Listen to port in environment file
 app.listen(process.env.PORT, () => {
