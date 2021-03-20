@@ -9,7 +9,7 @@ const { requireLogin, middleware } = require("../Validators/validation");
 const router = express.Router();
 console.log("I am here");
 router.post("/favorite/addToWishList", requireLogin, addItemToWishList);
-router.get(
+router.patch(
   "/favorite/removeFromWishList",
   requireLogin,
   removeItemFromWishList
