@@ -56,7 +56,8 @@ exports.addItemToWishList = (req, res) => {
 };
 
 exports.removeItemFromWishList = (req, res) => {
-  Favorite.findOne({ _id: req.query.id }).exec((error, favorite) => {
+  //Favorite.findOne({ _id: req.query.id }).exec((error, favorite) => {
+  Favorite.findOne({ user: req.user._id }).exec((error, favorite) => {
     if (error) return res.status(400).json({ error });
     if (favorite) {
       const productIndex = favorite.favoriteItems.findIndex(
