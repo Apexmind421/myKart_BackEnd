@@ -76,7 +76,7 @@ exports.removeItemFromWishList = (req, res) => {
         }
 
         if (_favorite) {
-          return res.status(201).json({
+          return res.status(200).json({
             favorite: _favorite,
           });
         }
