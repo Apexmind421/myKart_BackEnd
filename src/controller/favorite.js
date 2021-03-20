@@ -2,7 +2,8 @@ const Favorite = require("../models/favorite");
 const Product = require("../models/product");
 
 exports.addItemToWishList = (req, res) => {
-  Favorite.findOne({ _id: req.query.wishlistid }).exec((error, favorite) => {
+  //Favorite.findOne({ _id: req.query.wishlistid }).exec((error, favorite) => {
+  Favorite.findOne({ user: req.user._id }).exec((error, favorite) => {
     if (error) return res.status(400).json({ error });
     if (favorite) {
       if (req.body.title) {
