@@ -51,8 +51,21 @@ const productScehma = new mongoose.Schema(
         specValue: {
           type: String,
         },
+        specType: {
+          type: String,
+        },
       },
     ],
+    inTheBox: [
+      {
+        item: { type: String },
+      },
+    ],
+    warrentyReturns: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",

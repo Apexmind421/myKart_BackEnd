@@ -45,12 +45,23 @@ exports.addProduct = (req, res) => {
     description: req.body.description,
     category: req.body.category,
     createdBy: req.user._id,
+    warrentyReturns: req.body.warrentyReturns,
   };
 
   if (req.files.length > 0) {
     productObj.productImages = req.files.map((file) => {
       return { img: file.filename };
     });
+  }
+
+  if (req.body.inTheBox) {
+    const boxItems = JSON.parse(req.body.inTheBox);
+    //console.log("box Items are " + boxItems);
+    productObj.inTheBox = [];
+
+    for (i in boxItems) {
+      productObj.inTheBox.push({ item: boxItems[i] });
+    }
   }
 
   //Specifications
@@ -70,15 +81,25 @@ exports.addProduct = (req, res) => {
     color: req.body.color,
   };*/
 
-  productObj.specifications = [];
   //const specs = req.body.specifications;
+  if (req.body.specs) {
+    productObj.specifications = [];
+    const specification = JSON.parse(req.body.specs);
+    for (i in specification) {
+      productObj.specifications.push({
+        specType: specification[i][0],
+        specValue: specification[i][1],
+        specName: specification[i][2],
+      });
+    }
+  }
+  /*
   if (req.body.brand) {
     productObj.specifications.push({
       specValue: req.body.brand,
       specName: "Brand",
     });
   }
-
   if (req.body.dimensions) {
     productObj.specifications.push({
       specName: "Dimensions",
@@ -151,7 +172,7 @@ exports.addProduct = (req, res) => {
       specValue: req.body.color,
     });
   }
-
+*/
   //};
 
   const _prod = new Product(productObj);
