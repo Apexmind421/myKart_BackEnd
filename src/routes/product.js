@@ -35,6 +35,13 @@ router.post(
   upload.array("productImages"),
   addProduct
 );
+/*
+router.post(
+  "/product/add",
+  requireLogin,
+  // upload.array("productImages"),
+  addProduct
+);*/
 //router.post('/product/add',upload.array('productImages'), addProduct);
 console.log("i am inside!");
 router.get("/product/fetch", fetchProducts);

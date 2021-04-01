@@ -51,3 +51,19 @@ exports.getAddress = (req, res) => {
     }
   });
 };
+
+exports.deleteAddress = (req, res) => {
+  const UserAddress = req.query.UserAddress;
+  //console.log("WishList ID is " + wishlistId);
+  if (UserAddress) {
+    console.log("UserAddress ID is " + UserAddress);
+    UserAddress.findOneAndDelete({ _id: UserAddress }).exec((error, result) => {
+      if (error || !result) return res.status(400).json({ error });
+      if (result) {
+        res.status(202).json({ message: "UserAddress deleted sucessfully" });
+      }
+    });
+  } else {
+    res.status(400).json({ error: "Params required" });
+  }
+};

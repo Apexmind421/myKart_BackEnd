@@ -47,11 +47,21 @@ exports.addProduct = (req, res) => {
     createdBy: req.user._id,
     warrentyReturns: req.body.warrentyReturns,
   };
-
+  /*
   if (req.files.length > 0) {
     productObj.productImages = req.files.map((file) => {
       return { img: file.filename };
     });
+  }
+  */
+  console.log("**********Images are " + JSON.parse(req.body.productImages));
+  if (req.body.productImages) {
+    const productImages = JSON.parse(req.body.productImages);
+    productObj.productImages = [];
+
+    for (i in productImages) {
+      productObj.productImages.push({ img: productImages[i] });
+    }
   }
 
   if (req.body.inTheBox) {
