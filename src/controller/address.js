@@ -16,10 +16,10 @@ exports.addAddress = (req, res) => {
           },
         },
         { new: true }
-      ).exec((error, result) => {
+      ).exec((error, address) => {
         if (error) return res.status(400).json({ error });
-        if (result) {
-          res.status(201).json({ result });
+        if (address) {
+          res.status(201).json({ address });
         }
       });
     } else {
