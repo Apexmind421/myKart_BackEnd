@@ -5,11 +5,13 @@ const {
   addAddress,
   getAddress,
   deleteAddress,
+  modifyAddress,
 } = require("../controller/address");
-const router = express.Router();
 
-router.post("/user/address/create", requireLogin, addAddress);
+const router = express.Router();
 router.get("/user/getaddress", requireLogin, getAddress);
+router.post("/user/address/create", requireLogin, addAddress);
+router.patch("/user/address/update", requireLogin, modifyAddress);
 router.delete("/user/deleteaddress", requireLogin, deleteAddress);
 
 module.exports = router;

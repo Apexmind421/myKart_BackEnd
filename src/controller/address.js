@@ -14,11 +14,12 @@ exports.addAddress = (req, res) => {
           $set: {
             "address.$": req.body.address,
           },
-        }
-      ).exec((error, address) => {
+        },
+        { new: true }
+      ).exec((error, result) => {
         if (error) return res.status(400).json({ error });
-        if (address) {
-          res.status(201).json({ address });
+        if (result) {
+          res.status(201).json({ result });
         }
       });
     } else {
@@ -52,15 +53,49 @@ exports.getAddress = (req, res) => {
   });
 };
 
-exports.deleteAddress = (req, res) => {
-  const UserAddress = req.query.UserAddress;
+exports.deleteAddress = async (req, res) => {
+  const UserAddressID = req.query.UserAddress;
   //console.log("WishList ID is " + wishlistId);
-  if (UserAddress) {
-    console.log("UserAddress ID is " + UserAddress);
-    UserAddress.findOneAndDelete({ _id: UserAddress }).exec((error, result) => {
-      if (error || !result) return res.status(400).json({ error });
+  if (UserAddressID) {
+    console.log("UserAddress ID is " + UserAddressID);
+    const addDelete = await UserAddress.findOneAndDelete({
+      _id: UserAddressID,
+    });
+    if (addDelete) {
+      return res.status(201).json({ message: "Categories removed" });
+    } else {
+      return res.status(400).json({ addDelete });
+    }
+    /* UserAddress.findOneAndDelete({ _id: UserAddressID }).exec(
+      (error, result) => {
+        if (error) return res.status(400).json({ error });
+        if (result) {
+          res.status(202).json({ message: "UserAddress deleted sucessfully" });
+        }
+      }
+    );
+  } else {
+    res.status(400).json({ error: "Params required" });
+  }*/
+  }
+};
+
+exports.modifyAddress = (req, res) => {
+  const UserAddressID = req.body.address._id;
+  console.log("UserAddress ID is " + JSON.stringify(req.body.address.name));
+  if (UserAddressID) {
+    UserAddress.findOneAndUpdate(
+      { user: req.user._id, "address._id": req.body.address._id },
+      {
+        $set: {
+          "address.$": req.body.address,
+        },
+      },
+      { new: true }
+    ).exec((error, result) => {
+      if (error) return res.status(400).json({ error: error });
       if (result) {
-        res.status(202).json({ message: "UserAddress deleted sucessfully" });
+        res.status(202).json({ result });
       }
     });
   } else {
