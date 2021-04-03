@@ -98,8 +98,8 @@ exports.addProduct = (req, res) => {
     for (i in specification) {
       productObj.specifications.push({
         specType: specification[i][0],
-        specValue: specification[i][1],
-        specName: specification[i][2],
+        specName: specification[i][1],
+        specValue: specification[i][2],
       });
     }
   }
