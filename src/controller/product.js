@@ -54,7 +54,7 @@ exports.addProduct = (req, res) => {
     });
   }
   */
-  console.log("**********Images are " + JSON.parse(req.body.productImages));
+  //console.log("**********Images are " + JSON.parse(req.body));
   if (req.body.productImages) {
     const productImages = JSON.parse(req.body.productImages);
     productObj.productImages = [];
@@ -74,23 +74,6 @@ exports.addProduct = (req, res) => {
     }
   }
 
-  //Specifications
-  /*productObj.specifications = {
-    brand: req.body.brand,
-    dimensions: req.body.dimensions,
-    weight: req.body.weight,
-    displayType: req.body.displayType,
-    displaySize: req.body.displaySize,
-    displayResolution: req.body.displayResolution,
-    os: req.body.os,
-    cpu: req.body.cpu,
-    internalMemory: req.body.internalMemory,
-    ram: req.body.ram,
-    camera: req.body.camera,
-    battery: req.body.battery,
-    color: req.body.color,
-  };*/
-
   //const specs = req.body.specifications;
   if (req.body.specs) {
     productObj.specifications = [];
@@ -103,87 +86,6 @@ exports.addProduct = (req, res) => {
       });
     }
   }
-  /*
-  if (req.body.brand) {
-    productObj.specifications.push({
-      specValue: req.body.brand,
-      specName: "Brand",
-    });
-  }
-  if (req.body.dimensions) {
-    productObj.specifications.push({
-      specName: "Dimensions",
-      specValue: req.body.dimensions,
-    });
-  }
-  if (req.body.weight) {
-    productObj.specifications.push({
-      specName: "Weight",
-      specValue: req.body.weight,
-    });
-  }
-  if (req.body.displayType) {
-    productObj.specifications.push({
-      specName: "Display Type",
-      specValue: req.body.displayType,
-    });
-  }
-  if (req.body.displaySize) {
-    productObj.specifications.push({
-      specName: "Display Size",
-      specValue: req.body.displaySize,
-    });
-  }
-  if (req.body.displayResolution) {
-    productObj.specifications.push({
-      specName: "Display Resolution",
-      specValue: req.body.displayResolution,
-    });
-  }
-  if (req.body.os) {
-    productObj.specifications.push({
-      specName: "OS",
-      specValue: "iOS",
-    });
-  }
-  if (req.body.cpu) {
-    productObj.specifications.push({
-      specName: "CPU",
-      specValue: req.body.cpu,
-    });
-  }
-  if (req.body.internalMemory) {
-    productObj.specifications.push({
-      specName: "Internal Memory",
-      specValue: req.body.internalMemory,
-    });
-  }
-  if (req.body.ram) {
-    productObj.specifications.push({
-      specName: "RAM",
-      specValue: req.body.ram,
-    });
-  }
-  if (req.body.camera) {
-    productObj.specifications.push({
-      specName: "Camera",
-      specValue: req.body.camera,
-    });
-  }
-  if (req.body.battery) {
-    productObj.specifications.push({
-      specName: "Battery",
-      specValue: req.body.battery,
-    });
-  }
-  if (req.body.color) {
-    productObj.specifications.push({
-      specName: "Color",
-      specValue: req.body.color,
-    });
-  }
-*/
-  //};
 
   const _prod = new Product(productObj);
   _prod.save((error, product) => {
@@ -195,7 +97,9 @@ exports.addProduct = (req, res) => {
 };
 
 exports.fetchProducts = (req, res) => {
-  const category = req.query.category ? { category: req.query.category } : {};
+  const category = req.query.category
+    ? { category: { $in: req.query.category } }
+    : {};
   const subcategory = req.query.subcategory
     ? { "category.name": req.query.subcategory }
     : {};
