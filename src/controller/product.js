@@ -177,7 +177,7 @@ exports.getProducts = (req, res) => {
     }
   }
 
-  console.log(findArgs);
+  //console.log(findArgs);
   Product.find(findArgs)
     .populate("category")
     .sort(sortOrder)
@@ -230,7 +230,7 @@ exports.getProductFilters = (req, res) => {
     //}
   }
 
-  console.log(findArgs);
+  //console.log(findArgs);
 
   Product.aggregate([
     { $match: findArgs },
@@ -286,7 +286,7 @@ exports.getProducts1 = (req, res) => {
     }
   }
 
-  console.log(findArgs);
+  //console.log(findArgs);
 
   if (searchQuery) {
     Product.find(findArgs)
@@ -342,7 +342,7 @@ exports.updateProductReviews = (req, res) => {
         });
       if (product) {
         let myArray = product.reviews;
-        console.log("Reviews are ******************" + JSON.stringify(myArray));
+        //console.log("Reviews are ******************" + JSON.stringify(myArray));
         //myArray.slice(skip, limit);
         //console.log(
         // "*********************Reviews are " + JSON.stringify(myArray)
@@ -441,7 +441,7 @@ exports.fetchProductsBySlug = (req, res) => {
 
 exports.fetchProductDetailsById = (req, res) => {
   const { productId } = req.params;
-  console.log("product ID is " + productId);
+  //console.log("product ID is " + productId);
   if (productId) {
     Product.findOne({ _id: productId }).exec((error, product) => {
       if (error) return res.status(400).json({ error });
@@ -481,14 +481,14 @@ exports.addProductReview = (req, res) => {
         var yyyy = today.getFullYear();
 
         today = mm + "/" + dd + "/" + yyyy;
-        console.log("Today is " + today);
+        //console.log("Today is " + today);
         const review = {
           name: req.body.name,
           rating: Number(req.body.rating),
           comment: req.body.comment,
           review_date: today,
         };
-        console.log("Review is " + JSON.stringify(review));
+        //console.log("Review is " + JSON.stringify(review));
         product.reviews.push(review);
         product.numReviews = product.reviews.length;
 
