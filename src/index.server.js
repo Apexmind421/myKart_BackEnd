@@ -14,6 +14,7 @@ const pageRoutes = require("./routes/admin/page");
 const addressRoutes = require("./routes/address");
 const initialDataRoutes = require("./routes/admin/initialData");
 const orderRoutes = require("./routes/order");
+const questionRoutes = require("./routes/questions");
 
 const cors = require("cors");
 
@@ -48,6 +49,7 @@ app.use("/api", pageRoutes);
 app.use("/api", addressRoutes);
 app.use("/api", initialDataRoutes);
 app.use("/api", orderRoutes);
+app.use("/api", questionRoutes);
 app.use("/api", favoriteRoutes);
 
 // Listen to port in environment file
