@@ -21,7 +21,7 @@ exports.addQuestion = (req, res) => {
   });
 };
 
-exports.addAnswer = (req, res) => {};
+//exports.addAnswer = (req, res) => {};
 
 exports.getQuestions = (req, res) => {
   Questions.find({})

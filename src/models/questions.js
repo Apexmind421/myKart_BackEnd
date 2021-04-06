@@ -12,4 +12,5 @@ const questionSchema = new mongoose.Schema({
     ref: "Product",
   },
 });
+
 module.exports = mongoose.model("Questions", questionSchema);
