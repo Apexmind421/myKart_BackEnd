@@ -1,4 +1,4 @@
-const Questions = require("../models/Questions");
+const Questions = require("../models/questions");
 
 exports.addQuestion = (req, res) => {
   const questionObj = {
