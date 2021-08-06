@@ -3,6 +3,83 @@ const slugify = require("slugify");
 const shortid = require("shortid");
 const { json } = require("express");
 
+exports.addImagesToProduct = (req, res) => {
+  //console.log("I am in side 001 " + JSON.parse(req.body.productImages));
+
+  const productObj = {};
+  if (req.body.productImages) {
+    console.log("I am in side 002 " + JSON.parse(req.body.productImages));
+    const productImages = JSON.parse(req.body.productImages);
+    productObj.productImages = [];
+    for (i in productImages) {
+      productObj.productImages.push({ img: productImages[i] });
+    }
+  }
+  console.log("I am in side 003 " + JSON.stringify(productObj.productImages));
+  const productId = req.query.id;
+
+  if (productId) {
+    Product.findOne({ _id: productId }).exec((error, product) => {
+      if (error) return res.status(400).json({ error });
+      if (product) {
+        Product.findOneAndUpdate(
+          { _id: productId },
+          { productImages: productObj.productImages },
+          { new: true }
+        ).exec((error, updatedProduct) => {
+          if (error) return res.status(400).json({ error });
+          if (updatedProduct) {
+            return res.status(201).json({ product: updatedProduct });
+          }
+        });
+      } else {
+        return res.status(400).json({ error: "Invalid product ID" });
+      }
+    });
+  } else {
+    if (error) return res.status(400).json({ error: "Provide product ID" });
+  }
+};
+
+exports.addSpecificationsToProduct = (req, res) => {
+  const productObj = {};
+  if (req.body.specs) {
+    productObj.specifications = [];
+    const specification = req.body.specs;
+    console.log("Specifications are " + JSON.stringify(specification));
+    for (i in specification) {
+      productObj.specifications.push({
+        specType: specification[i][0],
+        specName: specification[i][1],
+        specValue: specification[i][2],
+        filterable: specification[i][3],
+      });
+    }
+  }
+  const productId = req.query.id;
+  if (productId) {
+    Product.findOne({ _id: productId }).exec((error, product) => {
+      if (error) return res.status(400).json({ error });
+      if (product) {
+        Product.findOneAndUpdate(
+          { _id: productId },
+          { specifications: productObj.specifications },
+          { new: true }
+        ).exec((error, updatedProduct) => {
+          if (error) return res.status(400).json({ error });
+          if (updatedProduct) {
+            return res.status(201).json({ product: updatedProduct });
+          }
+        });
+      } else {
+        return res.status(400).json({ error: "Invalid product ID" });
+      }
+    });
+  } else {
+    if (error) return res.status(400).json({ error: "Provide product ID" });
+  }
+};
+
 createProducts = (Products, parentId = null) => {
   const productList = [];
   let product;
@@ -195,7 +272,7 @@ exports.getProducts = (req, res) => {
       });
     });
 };
-
+/*
 exports.getProductFilters = (req, res) => {
   let findArgs = {};
 
@@ -258,6 +335,124 @@ exports.getProductFilters = (req, res) => {
       data,
     });
   });
+};
+*/
+
+exports.getProductFilters = (req, res) => {
+  let order = req.query.order ? slugify(req.query.order) : "slug";
+  let sortBy = req.query.sortBy ? req.query.sortBy : "_id";
+  const sortOrder = req.query.sortOrder
+    ? req.query.sortOrder === "lowestprice"
+      ? { price: 1 }
+      : req.query.sortOrder === "highestprice"
+      ? { price: -1 }
+      : req.query.sortOrder === "nameascending"
+      ? { slug: 1 }
+      : { slug: -1 }
+    : { _id: -1 };
+  let limit = req.body.limit ? parseInt(req.body.limit) : 5;
+  let skip = parseInt(req.body.skip);
+
+  let findArgs1 = {};
+  let findArgs2 = {};
+
+  for (let key in req.body.filters) {
+    if (key === "specifications") {
+      let query1 = [];
+      for (let x in req.body.filters[key]) {
+        console.log("Filters are " + JSON.stringify(req.body.filters));
+        if (req.body.filters[key][x].length > 0) {
+          query1.push({
+            $and: [
+              { "specifications.specName": x },
+              { "specifications.specValue": { $in: req.body.filters[key][x] } },
+            ],
+          });
+        }
+      }
+      findArgs1["$and"] = query1;
+      findArgs2["$and"] = query1;
+      console.log("x1 is " + JSON.stringify(findArgs1));
+    } else if (key === "price") {
+      // gte -  greater than price [0-10]
+      // lte - less than
+      if (req.body.filters[key].length > 0) {
+        findArgs1[key] = {
+          $gte: req.body.filters[key][0],
+          $lte: req.body.filters[key][1],
+        };
+        findArgs2[key] = {
+          $gte: req.body.filters[key][0],
+          $lte: req.body.filters[key][1],
+        };
+      }
+    } else if (key === "category") {
+      // gte -  greater than price [0-10]
+      // lte - less than
+      if (req.body.filters[key]) {
+        findArgs1[key] = {
+          $in: req.body.filters[key],
+        };
+      }
+    } else {
+      if (req.body.filters[key].length > 0) {
+        findArgs1[key] = req.body.filters[key];
+        findArgs2[key] = req.body.filters[key];
+      }
+    }
+  }
+
+  console.log("Find Args " + JSON.stringify(findArgs1));
+  Product.find(findArgs1)
+    .populate("category")
+    .sort(sortOrder)
+    .skip(skip)
+    .limit(limit)
+    .exec((err, products) => {
+      if (err) {
+        return res.status(400).json({
+          error: "Products not found",
+        });
+      }
+      if (products) {
+        Product.aggregate([
+          { $match: findArgs2 },
+          // { $match: findArgs3 },
+          { $unwind: "$specifications" },
+          {
+            $project: {
+              name: "$specifications.specName",
+              value: { name: "$specifications.specValue" },
+              type: "$specifications.specType",
+              _id: 0,
+            },
+          },
+          {
+            $group: {
+              _id: "$name",
+              values: { $addToSet: "$value" },
+            },
+          },
+        ]).exec((err, filters) => {
+          if (err) {
+            return res.status(400).json({
+              error: err,
+            });
+          }
+          if (filters) {
+            res.json({
+              size: products.length,
+              products,
+              filters,
+            });
+          }
+        });
+      } else {
+        return res.status(400).json({
+          error: "Products not found",
+        });
+      }
+    });
 };
 
 exports.getProducts1 = (req, res) => {
@@ -330,29 +525,6 @@ exports.fetchProductDetails = (req, res) => {
   });
 };
 
-exports.updateProductReviews = (req, res) => {
-  const productId = req.query.id;
-  const skip = req.query.page ? (req.query.page - 1) * 5 : 0;
-  const limit = req.query.limit ? parseInt(req.query.limit) : 5;
-  if (productId) {
-    Product.findOne({ _id: productId }).exec((error, product) => {
-      if (error)
-        return res.status(400).json({
-          error,
-        });
-      if (product) {
-        let myArray = product.reviews;
-        //console.log("Reviews are ******************" + JSON.stringify(myArray));
-        //myArray.slice(skip, limit);
-        //console.log(
-        // "*********************Reviews are " + JSON.stringify(myArray)
-        //);
-        //product.reviews.slice(2, 3);
-        res.status(200).json({ reviews: myArray.slice(skip, limit + skip) });
-      }
-    });
-  }
-};
 /*const productId = req.body.productId;
   if (productId) {
     Product.findOne({ _id: productId }).exec((error, product) => {
@@ -512,5 +684,29 @@ exports.addProductReview = (req, res) => {
     });
   } else {
     return res.status(400).json({ error: "Product ID is required" });
+  }
+};
+
+exports.updateProductReviews = (req, res) => {
+  const productId = req.query.id;
+  const skip = req.query.page ? (req.query.page - 1) * 5 : 0;
+  const limit = req.query.limit ? parseInt(req.query.limit) : 5;
+  if (productId) {
+    Product.findOne({ _id: productId }).exec((error, product) => {
+      if (error)
+        return res.status(400).json({
+          error,
+        });
+      if (product) {
+        let myArray = product.reviews;
+        //console.log("Reviews are ******************" + JSON.stringify(myArray));
+        //myArray.slice(skip, limit);
+        //console.log(
+        // "*********************Reviews are " + JSON.stringify(myArray)
+        //);
+        //product.reviews.slice(2, 3);
+        res.status(200).json({ reviews: myArray.slice(skip, limit + skip) });
+      }
+    });
   }
 };

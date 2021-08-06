@@ -58,80 +58,17 @@ exports.addItemToCart = (req, res) => {
   });
 };
 
-exports.addItemToCart1 = (req, res) => {
-  Cart.findOne({ user: req.user._id }).exec((error, cart) => {
-    if (error) return res.status(400).json({ error });
-    if (cart) {
-      //if cart already exists then update cart by quantity
-      console.log("I am here 03");
-      console.log("XXX " + req.body.cartItems.product);
-      const product = req.body.cartItems.product;
-      const item = cart.cartItems.find((c) => c.product == product);
-      console.log("I am outside " + item);
-      let condition, update;
-      if (item) {
-        console.log("I am inside if");
-        condition = { user: req.user._id, "cartItems.product": product };
-        update = {
-          $set: {
-            "cartItems.$": {
-              ...req.body.cartItems,
-              quantity: item.quantity + req.body.cartItems.quantity,
-            },
-          },
-        };
-      } else {
-        console.log("I am inside else");
-        condition = { user: req.user._id };
-        update = {
-          $push: {
-            cartItems: req.body.cartItems,
-          },
-        };
-      }
-      Cart.findOneAndUpdate(condition, update).exec((error, _cart) => {
-        if (error) return res.status(400).json({ error });
-        if (_cart) {
-          return res.status(201).json({ cart: _cart });
-        }
-      });
-    } else {
-      //if cart not exist then create a new cart
-      console.log("I am here 01");
-      const cart = new Cart({
-        user: req.user._id,
-        cartItems: [req.body.cartItems],
-      });
-      console.log("XXX" + req.body.cartItems);
-      cart.save((error, cart) => {
-        if (error) return res.status(400).json({ error });
-        if (cart) {
-          return res.status(201).json({ cart });
-        }
-      });
-    }
-  });
-};
-
 exports.addItemToCart2 = (req, res) => {
   Cart.findOne({ user: req.user._id }).exec((error, cart) => {
     if (error) return res.status(400).json({ error });
     if (cart) {
-      console.log("Cart from Req is " + JSON.stringify(req.body));
-      //Added on 26-12-2020
-      //let totalPrice = cart.totalPrice ? cart.totalPrice : 0;
-      //let totalItems = cart.numberOfItems ? cart.numberOfItems : 0;
       for (const i in req.body.cartItems) {
-        // console.log("Item price is " + req.body.cartItems[i].price);
-
         const productIndex = cart.cartItems.findIndex(
           (_cart) => _cart.product == req.body.cartItems[i].product
         );
         if (productIndex > -1) {
-          console.log("I am in If1" + cart.cartItems[productIndex]);
           let productItem = cart.cartItems[productIndex];
           productItem.quantity = req.body.cartItems[i].quantity;
-
           cart.cartItems[productIndex] = productItem;
         } else {
           cart.cartItems.push(req.body.cartItems[i]);
@@ -153,13 +90,10 @@ exports.addItemToCart2 = (req, res) => {
       });
     } else {
       //if cart not exist then create a new cart
-      console.log("I am here 01");
       const cart = new Cart({
         user: req.user._id,
         cartItems: req.body.cartItems,
       });
-
-      console.log("XXX " + JSON.stringify(cart));
       cart.save((error, _cart) => {
         if (error) return res.status(400).json({ error });
         if (_cart) return res.status(201).json({ cart });
@@ -233,3 +167,82 @@ exports.getCartItems = (req, res) => {
     });
   //}
 };
+
+// new update remove cart items
+exports.removeCartItems = (req, res) => {
+  const { productId } = req.body.payload;
+  if (productId) {
+    Cart.updateone(
+      { user: req.user._id },
+      {
+        $pull: {
+          cartItems: {
+            product: productId,
+          },
+        },
+      }
+    ).exec((error, result) => {
+      if (error) return res.status(400).json({ error });
+      if (result) {
+        res.status(202).json({ result });
+      }
+    });
+  }
+};
+
+/*
+exports.addItemToCart1 = (req, res) => {
+  Cart.findOne({ user: req.user._id }).exec((error, cart) => {
+    if (error) return res.status(400).json({ error });
+    if (cart) {
+      //if cart already exists then update cart by quantity
+      console.log("I am here 03");
+      console.log("XXX " + req.body.cartItems.product);
+      const product = req.body.cartItems.product;
+      const item = cart.cartItems.find((c) => c.product == product);
+      console.log("I am outside " + item);
+      let condition, update;
+      if (item) {
+        console.log("I am inside if");
+        condition = { user: req.user._id, "cartItems.product": product };
+        update = {
+          $set: {
+            "cartItems.$": {
+              ...req.body.cartItems,
+              quantity: item.quantity + req.body.cartItems.quantity,
+            },
+          },
+        };
+      } else {
+        console.log("I am inside else");
+        condition = { user: req.user._id };
+        update = {
+          $push: {
+            cartItems: req.body.cartItems,
+          },
+        };
+      }
+      Cart.findOneAndUpdate(condition, update).exec((error, _cart) => {
+        if (error) return res.status(400).json({ error });
+        if (_cart) {
+          return res.status(201).json({ cart: _cart });
+        }
+      });
+    } else {
+      //if cart not exist then create a new cart
+      console.log("I am here 01");
+      const cart = new Cart({
+        user: req.user._id,
+        cartItems: [req.body.cartItems],
+      });
+      console.log("XXX" + req.body.cartItems);
+      cart.save((error, cart) => {
+        if (error) return res.status(400).json({ error });
+        if (cart) {
+          return res.status(201).json({ cart });
+        }
+      });
+    }
+  });
+};
+*/

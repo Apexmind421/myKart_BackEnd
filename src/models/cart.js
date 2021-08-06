@@ -13,7 +13,7 @@ const cartSchema = new mongoose.Schema(
         //price: {type: Number,required:true}
       },
     ],
-    status: {
+    /*  status: {
       type: String,
       enum: ["new", "in progress", "completed"],
       default: "new",
@@ -27,7 +27,7 @@ const cartSchema = new mongoose.Schema(
       type: String,
       required: true,
       default: "0",
-    },
+    },*/
   },
   { timestamps: true }
 );

@@ -12,6 +12,8 @@ const {
   fetchProductDetailsById,
   getProductFilters,
   addProductReview,
+  addSpecificationsToProduct,
+  addImagesToProduct,
 } = require("../controller/product");
 const { requireLogin, middleware } = require("../Validators/validation");
 const shortid = require("shortid");
@@ -56,5 +58,16 @@ router.get("/product1/:productId", fetchProductDetailsById);
 router.post("/product/getProductFilters", getProductFilters);
 router.delete("/product/deleteProductById", requireLogin, deleteProductById);
 router.post("/product/addProductReview", requireLogin, addProductReview);
+router.post(
+  "/product/addSpecificationsToProduct",
+  requireLogin,
+  addSpecificationsToProduct
+);
+router.post(
+  "/product/addImagesToProduct",
+  requireLogin,
+  upload.array("productImages"),
+  addImagesToProduct
+);
 
 module.exports = router;
