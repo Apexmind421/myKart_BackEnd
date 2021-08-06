@@ -337,7 +337,7 @@ exports.getProductFilters = (req, res) => {
   });
 };
 */
-
+/*
 exports.getProductFilters = (req, res) => {
   let order = req.query.order ? slugify(req.query.order) : "slug";
   let sortBy = req.query.sortBy ? req.query.sortBy : "_id";
@@ -454,7 +454,7 @@ exports.getProductFilters = (req, res) => {
       }
     });
 };
-
+*/
 exports.getProducts1 = (req, res) => {
   let order = req.query.order ? slugify(req.query.order) : "slug";
   let sortBy = req.query.sortBy ? req.query.sortBy : "_id";
