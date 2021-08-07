@@ -272,7 +272,7 @@ exports.getProducts = (req, res) => {
       });
     });
 };
-/*
+
 exports.getProductFilters = (req, res) => {
   let findArgs = {};
 
@@ -336,7 +336,7 @@ exports.getProductFilters = (req, res) => {
     });
   });
 };
-*/
+
 /*
 exports.getProductFilters = (req, res) => {
   let order = req.query.order ? slugify(req.query.order) : "slug";
