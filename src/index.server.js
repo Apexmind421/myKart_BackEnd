@@ -15,7 +15,7 @@ const addressRoutes = require("./routes/address");
 const initialDataRoutes = require("./routes/admin/initialData");
 const orderRoutes = require("./routes/order");
 const questionRoutes = require("./routes/questions");
-
+const couponRoutes = require("./routes/coupon");
 const cors = require("cors");
 
 //environment variable
@@ -51,7 +51,7 @@ app.use("/api", initialDataRoutes);
 app.use("/api", orderRoutes);
 app.use("/api", questionRoutes); //Added Questions Route
 app.use("/api", favoriteRoutes);
-
+app.use("/api", couponRoutes);
 // Listen to port in environment file
 app.listen(process.env.PORT, () => {
   console.log(`Server has been started and listening on ${process.env.PORT}`);

@@ -6,6 +6,7 @@ exports.addOrder = (req, res) => {
   //  Cart.deleteOne({ user: req.user._id }).exec((error, result) => {
   //   if (error) return res.status(400).json({ error });
   //   if (result) {
+  console.log("Request body is " + JSON.stringify(req.body));
   req.body.user = req.user._id;
   req.body.orderStatus = [
     {

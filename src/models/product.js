@@ -19,6 +19,16 @@ const productScehma = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    sold: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    views: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
     price: {
       type: Number,
       required: true,
@@ -69,6 +79,14 @@ const productScehma = new mongoose.Schema(
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
+      required: true,
+    },
+    seller: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    city: {
+      type: String,
       required: true,
     },
     createdBy: {
