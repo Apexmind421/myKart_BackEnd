@@ -1,22 +1,27 @@
 const Product = require("../models/product");
+const User = require("../models/user");
 const slugify = require("slugify");
 const shortid = require("shortid");
 const { json } = require("express");
+//const {_doMultipleUpload} = require('../Validators/validation');
+const DataUri = require('datauri');
+const DatauriParser = require('datauri/parser');
+const path = require('path');
+const parser = new DatauriParser();
+const { uploader } = require('../config/cloudinary.config');
 
-exports.addImagesToProduct = (req, res) => {
-  //console.log("I am in side 001 " + JSON.parse(req.body.productImages));
-
+exports.addImagesToProduct = async (req, res) => {
+  const productId = req.query.id;
   const productObj = {};
-  if (req.body.productImages) {
-    console.log("I am in side 002 " + JSON.parse(req.body.productImages));
-    const productImages = JSON.parse(req.body.productImages);
-    productObj.productImages = [];
-    for (i in productImages) {
-      productObj.productImages.push({ img: productImages[i] });
+
+  if (req.files && req.files.length > 0) {
+    productObj.productImages = []; 
+    for (i in req.files) {
+      const prodFile= parser.format(path.extname(req.files[i].originalname).toString(), req.files[i].buffer);
+      const uploadResult = await uploader.upload(prodFile.content);
+        productObj.productImages.push({img: uploadResult.secure_url});
     }
   }
-  console.log("I am in side 003 " + JSON.stringify(productObj.productImages));
-  const productId = req.query.id;
 
   if (productId) {
     Product.findOne({ _id: productId }).exec((error, product) => {
@@ -113,45 +118,47 @@ createCategories = (category, parentId = null) => {
   return categoryList;
 };
 
-exports.addProduct = (req, res) => {
+exports.addProduct = async (req, res) => {
   const productObj = {
     name: req.body.name,
     slug: slugify(req.body.name),
+    brand: req.body.brand,
     price: req.body.price,
+    offer: req.body.offer,
     quantity: req.body.quantity,
     description: req.body.description,
     category: req.body.category,
-    createdBy: req.user._id,
+   createdBy: req.user._id,
+    seller: req.user._id,
     warrentyReturns: req.body.warrentyReturns,
   };
-  /*
-  if (req.files.length > 0) {
-    productObj.productImages = req.files.map((file) => {
-      return { img: file.filename };
-    });
-  }
-  */
-  //console.log("**********Images are " + JSON.parse(req.body));
-  if (req.body.productImages) {
-    const productImages = JSON.parse(req.body.productImages);
-    productObj.productImages = [];
 
-    for (i in productImages) {
-      productObj.productImages.push({ img: productImages[i] });
+  if (req.files && req.files.length > 0) {
+    productObj.productImages = [];
+   
+    for (i in req.files) {
+      const prodFile= parser.format(path.extname(req.files[i].originalname).toString(), req.files[i].buffer);
+      const uploadResult = await uploader.upload(prodFile.content);
+      productObj.productImages.push({img: uploadResult.secure_url});
+    }
+  }
+ 
+  if (req.body.avialableCities) {
+    const avialableCities = JSON.parse(req.body.avialableCities);
+    productObj.avialableCities = [];
+    for (i in avialableCities) {
+      productObj.avialableCities.push(avialableCities[i]);
     }
   }
 
   if (req.body.inTheBox) {
     const boxItems = JSON.parse(req.body.inTheBox);
-    //console.log("box Items are " + boxItems);
     productObj.inTheBox = [];
-
     for (i in boxItems) {
       productObj.inTheBox.push({ item: boxItems[i] });
     }
   }
 
-  //const specs = req.body.specifications;
   if (req.body.specs) {
     productObj.specifications = [];
     const specification = JSON.parse(req.body.specs);

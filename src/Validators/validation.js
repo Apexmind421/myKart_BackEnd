@@ -3,6 +3,8 @@ const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const path = require("path");
 const shortid = require("shortid");
+//const DataUri = require('datauri');
+//const { uploader } = require('../config/cloudinary.config');
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -12,8 +14,24 @@ const storage = multer.diskStorage({
     cb(null, shortid.generate() + "-" + file.originalname);
   },
 });
+//const storage1 = multer.memoryStorage();
+
+//const dUri = new DataUri();
+
+
+//const multerUploads = multer({ storage1 }).array('images');
+//exports.multerUploads = multerUploads;
+
+//exports.multerUploads = multer({ storage1 }).array('images');
+
+
+//const dataUri = req => (dUri.format(path.extname(req.originalname).toString(), req.buffer));
+//exports.dataUri = dataUri;
+
+
 
 exports.upload = multer({ storage });
+
 
 exports.validateRegisterRequest = [
   check("firstName").notEmpty().withMessage("First Name is required"),
@@ -62,3 +80,16 @@ exports.middleware = (req, res, next) => {
     return res.status(400).json({ message: "Access Denied" });
   next();
 };
+/*
+exports._doMultipleUpload = (req) => {
+  if (req.files) {
+      const data = []
+      for(let i=0;i< req.files.length;i++) {
+         // const file = dataUri(req.files[i]).content
+          const file = dUri.format(`${req.files[i].content.originalname}-${Date.now()}`, req.buffer)
+          uploader.upload(file, (result) => {data.push(result.url)})         
+      }
+      return data     
+  }
+}
+*/

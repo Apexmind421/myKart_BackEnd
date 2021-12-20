@@ -3,6 +3,7 @@ const env = require("dotenv");
 const mongoose = require("mongoose");
 const app = express();
 const path = require("path");
+
 //routes
 const authRoutes = require("./routes/auth");
 const adminAuthRoutes = require("./routes/admin/auth");
@@ -16,6 +17,7 @@ const initialDataRoutes = require("./routes/admin/initialData");
 const orderRoutes = require("./routes/order");
 const questionRoutes = require("./routes/questions");
 const couponRoutes = require("./routes/coupon");
+const {cloudinaryConfig} = require('./config/cloudinary.config');
 const cors = require("cors");
 
 //environment variable
@@ -39,6 +41,7 @@ mongoose
 //To parse JSON on response in Post. Acts as mediator
 app.use(cors());
 app.use(express.json());
+app.use('*', cloudinaryConfig);
 app.use("/public", express.static(path.join(__dirname, "/uploads/")));
 app.use("/api", authRoutes);
 app.use("/api", adminAuthRoutes);

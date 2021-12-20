@@ -1,6 +1,9 @@
 const Category = require('../models/category');
 const slugify = require('slugify');
-
+const DatauriParser = require('datauri/parser');
+const path = require('path');
+const parser = new DatauriParser();
+const { uploader } = require('../config/cloudinary.config');
 function createCategories(categories, parentId= null){
     const categoryList =[];
     let category;
@@ -23,14 +26,21 @@ function createCategories(categories, parentId= null){
     return categoryList;
 };  
 
-exports.addCategory = ((req,res) => {
+exports.addCategory =  async(req,res) => {
     const categoryObj = {
         name: req.body.name,
         slug: slugify(req.body.name)
     }
-
+/*
     if(req.file){
         categoryObj.categoryImages = process.env.API + '/public/' + req.file.filename;
+    }
+*/
+    if(req.files){
+        const catFile= parser.format(path.extname(req.files[0].originalname).toString(), req.files[0].buffer);
+        const uploadResult = await uploader.upload(catFile.content);
+        categoryObj.categoryImages=uploadResult.secure_url;
+        console.log("I am inside the create Category "+uploadResult.secure_url);
     }
 
     if(req.body.parentId){
@@ -44,7 +54,7 @@ exports.addCategory = ((req,res) => {
         if(error)      return res.status(400).json({error});
         if(category)   return res.status(201).json({category});
     });
-});
+};
 
 exports.fetchCategory = (req,res)=>{
     Category.find({})
@@ -65,7 +75,6 @@ exports.fetchCategories = (req,res)=>{
             error
         });
         if(categories){
-
             const categoryList  = createCategories(categories);
             res.status(200).json({categoryList});
         }

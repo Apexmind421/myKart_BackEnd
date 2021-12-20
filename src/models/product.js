@@ -19,6 +19,9 @@ const productScehma = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    brand:{
+      type: String,
+    },
     sold: {
       type: Number,
       required: true,
@@ -49,8 +52,9 @@ const productScehma = new mongoose.Schema(
     quantity: {
       type: Number,
       required: true,
+      default:1, 
     },
-    rating: { type: Number, default: 0, required: true },
+    rating: { type: Number, default: 5, required: true },
     numReviews: { type: Number, default: 0, required: true },
     reviews: [reviewScehma],
     specifications: [
@@ -85,10 +89,9 @@ const productScehma = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-    city: {
+    avialableCities: [{
       type: String,
-      required: true,
-    },
+    }],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -99,45 +102,3 @@ const productScehma = new mongoose.Schema(
 );
 
 module.exports = mongoose.model("Product", productScehma);
-
-/* 
-            dimensions: {
-                type: String
-            },
-            weight: {
-                type: String
-            },
-            displayType: {
-                type: String
-            },
-            displaySize: {
-                type: String
-            },
-            displayResolution: {
-                type: String
-            },
-            os: {
-                type: String
-            },
-            cpu: {
-                type: String
-            },
-            internalMemory: {
-                type: String
-            },
-            ram: {
-                type: String
-            },
-            camera: {
-                type: String
-            },
-            battery: {
-                type: String
-            },
-            color: {
-                type: String
-            },
-            brand: {
-                type: String
-            },
-            */
