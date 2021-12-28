@@ -128,14 +128,13 @@ exports.addProduct = async (req, res) => {
     quantity: req.body.quantity,
     description: req.body.description,
     category: req.body.category,
-   createdBy: req.user._id,
+    createdBy: req.user._id,
     seller: req.user._id,
     warrentyReturns: req.body.warrentyReturns,
   };
 
   if (req.files && req.files.length > 0) {
     productObj.productImages = [];
-   
     for (i in req.files) {
       const prodFile= parser.format(path.extname(req.files[i].originalname).toString(), req.files[i].buffer);
       const uploadResult = await uploader.upload(prodFile.content);

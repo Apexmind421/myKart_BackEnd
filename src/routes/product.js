@@ -40,14 +40,10 @@ const upload = multer({ storage1,
   }
 } 
 });
-//const upload = multer({ storage });
 
-router.post(
-  "/product/add",
-  requireLogin,
-  upload.array("productImages"),
-  addProduct
-);
+/*const upload = multer({ storage });*/
+
+router.post("/product/add", requireLogin,upload.array("productImages"),addProduct);
 console.log("i am inside!");
 router.get("/product/fetch", fetchProducts);
 router.get("/product", fetchProductDetails);

@@ -7,10 +7,8 @@ const { validateRegisterRequest,validateLoginRequest,isRequestValidated } = requ
 router.post('/admin/login',validateLoginRequest,isRequestValidated,login);
 router.post('/admin/register',validateRegisterRequest, isRequestValidated,register);
 router.post('/admin/signout', signout);
-/*
-router.post('/profile',requireLogin,(req,res)=>{
+/*router.post('/profile',requireLogin,(req,res)=>{
     res.status(200).json({user:'profile'})
-});
-*/
+});*/
 
 module.exports = router;
