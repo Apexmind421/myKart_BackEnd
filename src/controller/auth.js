@@ -33,10 +33,16 @@ module.exports.register = (req, res) => {
             process.env.JWT_SECRET,
             { expiresIn: "3h" }
           );
+          const refreshtoken = jwt.sign(
+            { _id: data._id, role: data.role },
+            process.env.REFRESH_TOKEN_SECRET,
+            { expiresIn: "3w" }
+          );
           //console.log(data);
           //console.log("Token is "+token);
           return res.status(201).json({
             token,
+            refreshtoken,
             user: {
               firstName,
               lastName,
@@ -52,8 +58,6 @@ module.exports.register = (req, res) => {
         }
       }
     });
-    //const _user = new User({firstName:"Baba", lastName:"Rabbit", email:"abc.421@gmail.com", password: "password", username: Math.random().toString()});
-    //_user.save();
   });
 };
 
@@ -70,10 +74,16 @@ module.exports.login = (req, res) => {
           process.env.JWT_SECRET,
           { expiresIn: "3h" }
         );
+        const refreshtoken = jwt.sign(
+          { _id: user._id, role: user.role },
+          process.env.REFRESH_TOKEN_SECRET,
+          { expiresIn: "3w" }
+        );
         const { _id, firstName, lastName, email, role, fullName } = user;
         res.cookie("token", token, { expiresIn: "1d" });
         return res.status(200).json({
           token,
+          refreshtoken,
           user: {
             _id,
             firstName,
@@ -97,8 +107,24 @@ module.exports.login = (req, res) => {
   });
 };
 
+
+module.exports.refreshToken = (req, res,next) => { 
+   const refreshtoken = req.body.refreshToken;
+   jwt.verify(refreshtoken, process.env.REFRESH_TOKEN_SECRET, function(err,decode)
+      {
+        if(err){
+          res.status(400).json({err});
+        }else{
+          let token = jwt.sign({name: decode.name},process.env.REFRESH_TOKEN_SECRET, { expiresIn: "3h" });
+          let refreshToken  = req.body.refreshToken;
+          res.status(200).json({message: "Token refreshed sucessfully", token, refreshToken});
+        }
+    })
+ };
+
 exports.logout = (req, res) => {
   res.clearCookie("token");
+  res.clearCookie("refreshtoken");
   res.status(200).json({
     message: "Signout successfully...!",
   });
