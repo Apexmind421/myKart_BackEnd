@@ -110,12 +110,12 @@ module.exports.login = (req, res) => {
 
 module.exports.refreshToken = (req, res,next) => { 
    const refreshtoken = req.body.refreshToken;
-   jwt.verify(refreshtoken, process.env.REFRESH_TOKEN_SECRET, function(err,decode)
+   jwt.verify(refreshtoken, process.env.REFRESH_TOKEN_SECRET, function(err,user)
       {
         if(err){
           res.status(400).json({err});
         }else{
-          let token = jwt.sign({name: decode.name},process.env.REFRESH_TOKEN_SECRET, { expiresIn: "3h" });
+          let token = jwt.sign({ _id: user._id, role: user.role },process.env.JWT_SECRET, { expiresIn: "3h" });
           let refreshToken  = req.body.refreshToken;
           res.status(200).json({message: "Token refreshed sucessfully", token, refreshToken});
         }
