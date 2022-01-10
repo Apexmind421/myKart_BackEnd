@@ -45,10 +45,13 @@ exports.addAddress = (req, res) => {
 };
 
 exports.getAddress = (req, res) => {
+  console.log('I am here inside getAddress');
   UserAddress.findOne({ user: req.user._id }).exec((error, userAddress) => {
     if (error) return res.status(400).json({ error });
     if (userAddress) {
-      res.status(200).json({ userAddress });
+     return res.status(200).json({ userAddress });
+    } else {
+      return res.status(200).json({});
     }
   });
 };
