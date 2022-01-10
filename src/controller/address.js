@@ -51,7 +51,7 @@ exports.getAddress = (req, res) => {
     if (userAddress) {
      return res.status(200).json({ userAddress });
     } else {
-      return res.status(200).json({});
+      return res.status(202).json({});
     }
   });
 };
