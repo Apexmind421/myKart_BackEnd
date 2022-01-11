@@ -51,35 +51,31 @@ exports.getAddress = (req, res) => {
     if (userAddress) {
      return res.status(200).json({ userAddress });
     } else {
-      return res.status(202).json({});
+      return res.status(200).json({});
     }
   });
 };
 
-exports.deleteAddress = async (req, res) => {
+
+exports.deleteAddress = (req, res) => {
   const UserAddressID = req.query.UserAddress;
-  //console.log("WishList ID is " + wishlistId);
   if (UserAddressID) {
-    console.log("UserAddress ID is " + UserAddressID);
-    const addDelete = await UserAddress.findOneAndDelete({
-      _id: UserAddressID,
-    });
-    if (addDelete) {
-      return res.status(201).json({ message: "Categories removed" });
-    } else {
-      return res.status(400).json({ addDelete });
-    }
-    /* UserAddress.findOneAndDelete({ _id: UserAddressID }).exec(
-      (error, result) => {
-        if (error) return res.status(400).json({ error });
-        if (result) {
-          res.status(202).json({ message: "UserAddress deleted sucessfully" });
-        }
+    UserAddress.findOneAndUpdate(
+      { user: req.user._id,"address._id": UserAddressID},
+      {
+        $pull: {
+          address: {
+            _id: UserAddressID,
+          },
+        },
+      },
+      {new: true}
+    ).exec((error, result) => {
+      if (error) return res.status(400).json({ error });
+      if (result) {
+        res.status(202).json({ result });
       }
-    );
-  } else {
-    res.status(400).json({ error: "Params required" });
-  }*/
+    });
   }
 };
 
