@@ -4,22 +4,25 @@ const slugify = require("slugify");
 const shortid = require("shortid");
 const { json } = require("express");
 //const {_doMultipleUpload} = require('../Validators/validation');
-const DataUri = require('datauri');
-const DatauriParser = require('datauri/parser');
-const path = require('path');
+const DataUri = require("datauri");
+const DatauriParser = require("datauri/parser");
+const path = require("path");
 const parser = new DatauriParser();
-const { uploader } = require('../config/cloudinary.config');
+const { uploader } = require("../config/cloudinary.config");
 
 exports.addImagesToProduct = async (req, res) => {
   const productId = req.query.id;
   const productObj = {};
 
   if (req.files && req.files.length > 0) {
-    productObj.productImages = []; 
+    productObj.productImages = [];
     for (i in req.files) {
-      const prodFile= parser.format(path.extname(req.files[i].originalname).toString(), req.files[i].buffer);
+      const prodFile = parser.format(
+        path.extname(req.files[i].originalname).toString(),
+        req.files[i].buffer
+      );
       const uploadResult = await uploader.upload(prodFile.content);
-        productObj.productImages.push({img: uploadResult.secure_url});
+      productObj.productImages.push({ img: uploadResult.secure_url });
     }
   }
 
@@ -136,12 +139,23 @@ exports.addProduct = async (req, res) => {
   if (req.files && req.files.length > 0) {
     productObj.productImages = [];
     for (i in req.files) {
-      const prodFile= parser.format(path.extname(req.files[i].originalname).toString(), req.files[i].buffer);
+      const prodFile = parser.format(
+        path.extname(req.files[i].originalname).toString(),
+        req.files[i].buffer
+      );
       const uploadResult = await uploader.upload(prodFile.content);
-      productObj.productImages.push({img: uploadResult.secure_url});
+      productObj.productImages.push({ img: uploadResult.secure_url });
     }
   }
- 
+
+  if (req.body.tags) {
+    const _tags = JSON.parse(req.body.tags);
+    productObj.tags = [];
+    for (i in _tags) {
+      productObj.tags.push(_tags[i].toLowerCase());
+    }
+  }
+
   if (req.body.avialableCities) {
     const avialableCities = JSON.parse(req.body.avialableCities);
     productObj.avialableCities = [];
@@ -180,11 +194,11 @@ exports.addProduct = async (req, res) => {
 };
 
 exports.fetchProducts = (req, res) => {
-  const category = req.query.category
-    ? { category: { $in: req.query.category } }
+  const category = req.query.searchKeyword
+    ? { "category.name": req.query.searchKeyword }
     : {};
-  const subcategory = req.query.subcategory
-    ? { "category.name": req.query.subcategory }
+  const subcategory = req.query.searchKeyword
+    ? { "category.name": req.query.searchKeyword }
     : {};
   const searchKeyword = req.query.searchKeyword
     ? {
@@ -194,14 +208,17 @@ exports.fetchProducts = (req, res) => {
         },
       }
     : {};
+  const searchKeyword1 = req.query.searchKeyword
+    ? { tags: req.query.searchKeyword }
+    : {};
   const sortOrder = req.query.sortOrder
     ? req.query.sortOrder === "lowest"
       ? { price: 1 }
       : { price: -1 }
     : { _id: -1 };
 
-  Product.find({ ...category })
-    .find({ ...searchKeyword })
+  Product.find({ $or: [{ ...category }, { ...subcategory }] })
+    .find({ $or: [{ ...searchKeyword }, { ...searchKeyword1 }] })
     .sort(sortOrder)
     .exec((error, products) => {
       if (error)
@@ -215,6 +232,23 @@ exports.fetchProducts = (req, res) => {
 };
 
 exports.getProducts = (req, res) => {
+  const category = req.query.searchKeyword
+    ? { "category.name": req.query.searchKeyword }
+    : {};
+  const subcategory = req.query.searchKeyword
+    ? { "category.name": req.query.searchKeyword }
+    : {};
+  const searchKeyword = req.query.searchKeyword
+    ? {
+        name: {
+          $regex: req.query.searchKeyword,
+          $options: "i",
+        },
+      }
+    : {};
+  const searchKeyword1 = req.query.searchKeyword
+    ? { tags: req.query.searchKeyword }
+    : {};
   let order = req.query.order ? slugify(req.query.order) : "slug";
   let sortBy = req.query.sortBy ? req.query.sortBy : "_id";
   const sortOrder = req.query.sortOrder
@@ -262,6 +296,8 @@ exports.getProducts = (req, res) => {
 
   //console.log(findArgs);
   Product.find(findArgs)
+    .find({ $or: [{ ...category }, { ...subcategory }] })
+    .find({ $or: [{ ...searchKeyword }, { ...searchKeyword1 }] })
     .populate("category")
     .sort(sortOrder)
     .skip(skip)
@@ -714,5 +750,87 @@ exports.updateProductReviews = (req, res) => {
         res.status(200).json({ reviews: myArray.slice(skip, limit + skip) });
       }
     });
+  }
+};
+
+exports.addProductVariant = (req, res) => {
+  //console.log("product ID is " + req.user._id);
+  const productId = req.query.productId;
+  if (productId) {
+    Product.findOne({ _id: productId }).exec((error, product) => {
+      if (error) return res.status(400).json({ error });
+      if (product) {
+        //console.log("I am adding prod variant" + JSON.parse(req.body));
+        if (req.body.variants) {
+          let _variant = [];
+          // const variantBody = JSON.parse(req.body.variants);
+          const variantBody = req.body.variants;
+          for (i in variantBody) {
+            _variant.push({
+              varationName: variantBody[i][0],
+              varationValue: variantBody[i][1],
+            });
+          }
+          const variant = {
+            variations: _variant,
+            varaiantPrice: req.body.varaiantPrice,
+            quantity: req.body.quantity,
+          };
+          product.variants.push(variant);
+          product.save((err, prod) => {
+            if (err) {
+              res.status(400).json({
+                message: err,
+              });
+            }
+            if (prod) {
+              return res.status(201).json({
+                product: prod,
+                message: "Variants saved sucessfully",
+              });
+            }
+          });
+        } else {
+          return res.status(400).json({ error: "Varaiants are required" });
+        }
+      }
+    });
+  } else {
+    return res.status(400).json({ error: "Product ID is required" });
+  }
+};
+
+exports.addProductTags = (req, res) => {
+  const productId = req.query.productId;
+  if (productId) {
+    Product.findOne({ _id: productId }).exec((error, product) => {
+      if (error) return res.status(400).json({ error });
+      if (product) {
+        if (req.body.tags) {
+          const _tags = JSON.parse(req.body.tags);
+          product.tags = [];
+          for (i in _tags) {
+            product.tags.push(_tags[i].toLowerCase());
+          }
+          product.save((err, prod) => {
+            if (err) {
+              res.status(400).json({
+                message: err,
+              });
+            }
+            if (prod) {
+              return res.status(201).json({
+                product: prod,
+                message: "tags saved sucessfully",
+              });
+            }
+          });
+        } else {
+          return res.status(400).json({ error: "Tags are required" });
+        }
+      }
+    });
+  } else {
+    return res.status(400).json({ error: "Product ID is required" });
   }
 };

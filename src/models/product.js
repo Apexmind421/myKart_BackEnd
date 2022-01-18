@@ -7,6 +7,38 @@ const reviewScehma = new mongoose.Schema({
   review_date: { type: String },
 });
 
+const variantScehma = new mongoose.Schema({
+  variations: [
+    {
+      varationName: {
+        type: String,
+      },
+      varationValue: {
+        type: String,
+      },
+    },
+  ],
+  varaiantPrice: {
+    type: Number,
+    required: true,
+  },
+  /* product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    required: true,
+  },
+  sku: {
+    type: String,
+    required: true,
+    trim: true,
+  },*/
+  quantity: {
+    type: Number,
+    required: true,
+    default: 1,
+  },
+});
+
 const productScehma = new mongoose.Schema(
   {
     name: {
@@ -19,7 +51,7 @@ const productScehma = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    brand:{
+    brand: {
       type: String,
     },
     sold: {
@@ -49,11 +81,7 @@ const productScehma = new mongoose.Schema(
         img: { type: String },
       },
     ],
-    quantity: {
-      type: Number,
-      required: true,
-      default:1, 
-    },
+    variants: [variantScehma],
     rating: { type: Number, default: 5, required: true },
     numReviews: { type: Number, default: 0, required: true },
     reviews: [reviewScehma],
@@ -89,9 +117,16 @@ const productScehma = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-    avialableCities: [{
-      type: String,
-    }],
+    avialableCities: [
+      {
+        type: String,
+      },
+    ],
+    tags: [
+      {
+        type: String,
+      },
+    ],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

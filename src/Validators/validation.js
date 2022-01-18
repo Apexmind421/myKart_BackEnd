@@ -18,20 +18,15 @@ const storage = multer.diskStorage({
 
 //const dUri = new DataUri();
 
-
 //const multerUploads = multer({ storage1 }).array('images');
 //exports.multerUploads = multerUploads;
 
 //exports.multerUploads = multer({ storage1 }).array('images');
 
-
 //const dataUri = req => (dUri.format(path.extname(req.originalname).toString(), req.buffer));
 //exports.dataUri = dataUri;
 
-
-
 exports.upload = multer({ storage });
-
 
 exports.validateRegisterRequest = [
   check("firstName").notEmpty().withMessage("First Name is required"),
@@ -55,9 +50,9 @@ exports.validateLoginRequest = [
 
 exports.isRequestValidated = (req, res, next) => {
   const errors = validationResult(req);
+  // console.log("I am inside request validator");
   if (errors.array().length > 0) {
     return res.status(400).json({ errors: errors.array()[0].msg });
-    console.log("I am inside request validator");
   }
   next();
 };
@@ -73,7 +68,6 @@ exports.requireLogin = (req, res, next) => {
   }
   next();
 };
-
 
 exports.middleware = (req, res, next) => {
   // console.log(req.user.role);

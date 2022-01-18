@@ -14,12 +14,20 @@ const {
   addProductReview,
   addSpecificationsToProduct,
   addImagesToProduct,
+  addProductVariant,
+  addProductTags,
 } = require("../controller/product");
 const { requireLogin } = require("../Validators/validation");
 const shortid = require("shortid");
 const multer = require("multer");
 const path = require("path");
-const ALLOWED_FORMATS = ['image/jpeg', 'image/png', 'image/jpg'];
+const ALLOWED_FORMATS = [
+  "image/jpeg",
+  "image/png",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
+];
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, path.join(path.dirname(__dirname), "/uploads/"));
@@ -31,19 +39,25 @@ const storage = multer.diskStorage({
 
 const storage1 = multer.memoryStorage();
 
-const upload = multer({ storage1, 
-  fileFilter: function(req, file, cb) {
-  if (ALLOWED_FORMATS.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Not supported file type!'), false);
-  }
-} 
+const upload = multer({
+  storage1,
+  fileFilter: function (req, file, cb) {
+    if (ALLOWED_FORMATS.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Not supported file type!"), false);
+    }
+  },
 });
 
 /*const upload = multer({ storage });*/
 
-router.post("/product/add", requireLogin,upload.array("productImages"),addProduct);
+router.post(
+  "/product/add",
+  requireLogin,
+  upload.array("productImages"),
+  addProduct
+);
 console.log("i am inside!");
 router.get("/product/fetch", fetchProducts);
 router.get("/product", fetchProductDetails);
@@ -57,6 +71,8 @@ router.get("/product1/:productId", fetchProductDetailsById);
 router.post("/product/getProductFilters", getProductFilters);
 router.delete("/product/deleteProductById", requireLogin, deleteProductById);
 router.post("/product/addProductReview", requireLogin, addProductReview);
+router.post("/product/addProductVariant", requireLogin, addProductVariant);
+router.post("/product/addProductTags", requireLogin, addProductTags);
 router.post(
   "/product/addSpecificationsToProduct",
   requireLogin,
