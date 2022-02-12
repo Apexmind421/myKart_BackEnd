@@ -55,11 +55,13 @@ const productScehma = new mongoose.Schema(
       type: String,
     },
     sold: {
+      //Need to be updated from order
       type: Number,
       required: true,
       default: 0,
     },
     views: {
+      //Need to be updated on view of product details
       type: Number,
       required: true,
       default: 0,
@@ -75,6 +77,10 @@ const productScehma = new mongoose.Schema(
     },
     offer: {
       type: Number,
+    },
+    mainImage: {
+      type: String,
+      //  required: [true, 'A product must have a main image']
     },
     productImages: [
       {
@@ -95,9 +101,22 @@ const productScehma = new mongoose.Schema(
         },
         specType: {
           type: String,
+          default: "Others",
         },
       },
     ],
+    lengthInCM: {
+      type: Number,
+    },
+    weightInCM: {
+      type: Number,
+    },
+    heightInCM: {
+      type: Number,
+    },
+    WeightInGrams: {
+      type: Number,
+    },
     inTheBox: [
       {
         item: { type: String },
@@ -105,7 +124,6 @@ const productScehma = new mongoose.Schema(
     ],
     warrentyReturns: {
       type: String,
-      required: true,
       trim: true,
     },
     category: {

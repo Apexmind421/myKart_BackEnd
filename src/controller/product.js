@@ -1,4 +1,5 @@
 const Product = require("../models/product");
+const Category = require("../models/category");
 const User = require("../models/user");
 const slugify = require("slugify");
 const shortid = require("shortid");
@@ -9,117 +10,6 @@ const DatauriParser = require("datauri/parser");
 const path = require("path");
 const parser = new DatauriParser();
 const { uploader } = require("../config/cloudinary.config");
-
-exports.addImagesToProduct = async (req, res) => {
-  const productId = req.query.id;
-  const productObj = {};
-
-  if (req.files && req.files.length > 0) {
-    productObj.productImages = [];
-    for (i in req.files) {
-      const prodFile = parser.format(
-        path.extname(req.files[i].originalname).toString(),
-        req.files[i].buffer
-      );
-      const uploadResult = await uploader.upload(prodFile.content);
-      productObj.productImages.push({ img: uploadResult.secure_url });
-    }
-  }
-
-  if (productId) {
-    Product.findOne({ _id: productId }).exec((error, product) => {
-      if (error) return res.status(400).json({ error });
-      if (product) {
-        Product.findOneAndUpdate(
-          { _id: productId },
-          { productImages: productObj.productImages },
-          { new: true }
-        ).exec((error, updatedProduct) => {
-          if (error) return res.status(400).json({ error });
-          if (updatedProduct) {
-            return res.status(201).json({ product: updatedProduct });
-          }
-        });
-      } else {
-        return res.status(400).json({ error: "Invalid product ID" });
-      }
-    });
-  } else {
-    if (error) return res.status(400).json({ error: "Provide product ID" });
-  }
-};
-
-exports.addSpecificationsToProduct = (req, res) => {
-  const productObj = {};
-  if (req.body.specs) {
-    productObj.specifications = [];
-    const specification = req.body.specs;
-    console.log("Specifications are " + JSON.stringify(specification));
-    for (i in specification) {
-      productObj.specifications.push({
-        specType: specification[i][0],
-        specName: specification[i][1],
-        specValue: specification[i][2],
-        filterable: specification[i][3],
-      });
-    }
-  }
-  const productId = req.query.id;
-  if (productId) {
-    Product.findOne({ _id: productId }).exec((error, product) => {
-      if (error) return res.status(400).json({ error });
-      if (product) {
-        Product.findOneAndUpdate(
-          { _id: productId },
-          { specifications: productObj.specifications },
-          { new: true }
-        ).exec((error, updatedProduct) => {
-          if (error) return res.status(400).json({ error });
-          if (updatedProduct) {
-            return res.status(201).json({ product: updatedProduct });
-          }
-        });
-      } else {
-        return res.status(400).json({ error: "Invalid product ID" });
-      }
-    });
-  } else {
-    if (error) return res.status(400).json({ error: "Provide product ID" });
-  }
-};
-
-createProducts = (Products, parentId = null) => {
-  const productList = [];
-  let product;
-  if (parentId == null) {
-    product = Products.filter((prod) => prod.parentId == undefined);
-  } else {
-    product = Products.filter((prod) => prod.parentId == parentId);
-  }
-  for (let prod of product) {
-    productList.push({
-      _id: prod._id,
-      name: prod._name,
-      slug: prod.slug,
-      children: createProducts(products, prod._id),
-    });
-  }
-  return productList;
-};
-
-createCategories = (category, parentId = null) => {
-  const categoryList = [];
-  let category1;
-  if (parentId == null) {
-    category1 = category.filter((cat) => cat.parentId == undefined);
-  } else {
-    category1 = category.filter((cat) => cat.parentId == parentId);
-  }
-  for (let cat of category1) {
-    categoryList.push(createCategories(category, cat._id));
-  }
-  return categoryList;
-};
 
 exports.addProduct = async (req, res) => {
   const productObj = {
@@ -134,6 +24,10 @@ exports.addProduct = async (req, res) => {
     createdBy: req.user._id,
     seller: req.user._id,
     warrentyReturns: req.body.warrentyReturns,
+    lengthInCM: req.body.lengthInCM,
+    weightInCM: req.body.weightInCM,
+    heightInCM: req.body.heightInCM,
+    WeightInGrams: req.body.WeightInGrams,
   };
 
   if (req.files && req.files.length > 0) {
@@ -217,8 +111,12 @@ exports.fetchProducts = (req, res) => {
       : { price: -1 }
     : { _id: -1 };
 
-  Product.find({ $or: [{ ...category }, { ...subcategory }] })
-    .find({ $or: [{ ...searchKeyword }, { ...searchKeyword1 }] })
+  // Product.find({ $or: [{ ...category }, { ...subcategory }] })
+  //.find({ $or: [{ ...searchKeyword }, { ...searchKeyword1 }] })
+  //.find({ ...searchKeyword })
+  // Product.find({ ...category })
+  Product.find({ $or: [{ ...searchKeyword }, { ...searchKeyword1 }] })
+    //Product.find({ ...searchKeyword })
     .sort(sortOrder)
     .exec((error, products) => {
       if (error)
@@ -230,13 +128,32 @@ exports.fetchProducts = (req, res) => {
       }
     });
 };
+exports.fetchTags = (req, res) => {
+  Product.distinct("tags").exec((err, data) => {
+    if (err) {
+      return res.status(400).json({
+        error: "Tags are not found" + err,
+      });
+    }
 
+    res.json({
+      size: data.length,
+      data,
+    });
+  });
+};
 exports.getProducts = (req, res) => {
-  const category = req.query.searchKeyword
-    ? { "category.name": req.query.searchKeyword }
-    : {};
-  const subcategory = req.query.searchKeyword
-    ? { "category.name": req.query.searchKeyword }
+  const category = req.body.category
+    ? {
+        // "category.slug": req.query
+        //{
+        // $regex: req.query.searchKeyword,
+        // $options: "i",
+        //},
+        //   { $in: [req.query.searchKeyword] },
+        category: { $in: req.body.category },
+        // category: { name: req.query.searchKeyword },
+      }
     : {};
   const searchKeyword = req.query.searchKeyword
     ? {
@@ -249,8 +166,6 @@ exports.getProducts = (req, res) => {
   const searchKeyword1 = req.query.searchKeyword
     ? { tags: req.query.searchKeyword }
     : {};
-  let order = req.query.order ? slugify(req.query.order) : "slug";
-  let sortBy = req.query.sortBy ? req.query.sortBy : "_id";
   const sortOrder = req.query.sortOrder
     ? req.query.sortOrder === "lowestprice"
       ? { price: 1 }
@@ -260,9 +175,12 @@ exports.getProducts = (req, res) => {
       ? { slug: 1 }
       : { slug: -1 }
     : { _id: -1 };
-  let limit = req.body.limit ? parseInt(req.body.limit) : 5;
+  let limit = req.body.limit ? parseInt(req.body.limit) : 250;
   let skip = parseInt(req.body.skip);
   let findArgs = {};
+  let select = req.body.select ? req.body.select : "";
+  // let order = req.query.order ? slugify(req.query.order) : "slug";
+  //let sortBy = req.query.sortBy ? req.query.sortBy : "_id";
 
   for (let key in req.body.filters) {
     if (key === "specifications") {
@@ -294,25 +212,154 @@ exports.getProducts = (req, res) => {
     }
   }
 
-  //console.log(findArgs);
-  Product.find(findArgs)
-    .find({ $or: [{ ...category }, { ...subcategory }] })
+  Product.aggregate([
+    {
+      $facet: {
+        categorizedByCategories: [
+          {
+            $match: {
+              $or: [{ ...searchKeyword }, { ...searchKeyword1 }, findArgs],
+            },
+          },
+          {
+            $lookup: {
+              from: Category.collection.name,
+              localField: "category",
+              foreignField: "_id",
+              as: "cat",
+            },
+          },
+          {
+            $group: {
+              _id: "$cat.name",
+              count: { $sum: 1 },
+            },
+          },
+
+          // Sort by year descending
+          { $sort: { count: -1, _id: -1 } },
+        ],
+        /*  categorizedByTags: [
+          {
+            $match: {
+              $or: [{ ...searchKeyword }, { ...searchKeyword1 }, findArgs],
+            },
+          },
+          { $unwind: "$category" },
+          {
+            $lookup: {
+              from: Category.collection.name,
+              localField: "category",
+              foreignField: "_id",
+              as: "cat",
+            },
+          },
+          //  { $sortByCount: "$cat.name" },
+        ],*/
+        categorizedByBrand: [
+          {
+            $match: {
+              $or: [{ ...searchKeyword }, { ...searchKeyword1 }, findArgs],
+            },
+          },
+          //   { $unwind: "$brand" },
+          // { $sortByCount: "$brand" },
+          {
+            $group: {
+              _id: "$brand",
+              count: { $sum: 1 },
+            },
+          },
+
+          // Sort by year descending
+          { $sort: { count: -1, _id: -1 } },
+        ],
+        /*   categorizedByPrice: [
+          // Filter out documents without a price e.g., _id: 7
+          { $match: { price: { $exists: 1 } } },
+          {
+            $bucket: {
+              groupBy: "$price",
+              boundaries: [0, 50000, 70000, 90000, 100000],
+              default: "Other",
+              output: {
+                count: { $sum: 1 },
+                name: { $push: "$name" },
+                price: { $push: "$price" },
+              },
+            },
+          },
+        ],*/
+        categorizedByPriceAuto: [
+          {
+            $match: {
+              $or: [{ ...searchKeyword }, { ...searchKeyword1 }, findArgs],
+            },
+          },
+          {
+            $bucketAuto: {
+              groupBy: "$price",
+              buckets: 1,
+            },
+          },
+        ],
+        filteredProducts: [
+          {
+            $match: {
+              $or: [{ ...searchKeyword }, { ...searchKeyword1 }, findArgs],
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              name: 1,
+              price: 1,
+              rating: 1,
+              productImages: 1,
+              seller: 1,
+            },
+          },
+          {
+            $limit: limit,
+          },
+          { $skip: skip },
+          { $sort: sortOrder },
+        ],
+      },
+    },
+  ])
+    /* Product.find(findArgs)
     .find({ $or: [{ ...searchKeyword }, { ...searchKeyword1 }] })
-    .populate("category")
+    //  .find({
+    //  $or: [{ ...category }, { ...searchKeyword }, { ...searchKeyword1 }],
+    //})
+    .find({ ...category })
+    //  .populate("category")
+    // .populate("seller")
+    .populate({ path: "category", select: ["name"] })
+    .populate({
+      path: "seller",
+      select: ["username"],
+      populate: { path: "user", select: ["_id"] },
+    })
+    .select(select)
     .sort(sortOrder)
     .skip(skip)
-    .limit(limit)
+    .limit(limit)*/
     .exec((err, data) => {
       if (err) {
         return res.status(400).json({
-          error: "Products not found",
+          error: "Products not found" + err,
         });
       }
+
       res.json({
         size: data.length,
         data,
       });
     });
+
+  //console.log(findArgs);
 };
 
 exports.getProductFilters = (req, res) => {
@@ -377,6 +424,267 @@ exports.getProductFilters = (req, res) => {
       data,
     });
   });
+};
+
+exports.getProductFilters1 = (req, res) => {
+  let findArgs = {};
+
+  for (let key in req.body.filters) {
+    if (key === "specifications") {
+      let query1 = [];
+      for (let x in req.body.filters[key]) {
+        if (req.body.filters[key][x].length > 0) {
+          query1.push({
+            $and: [
+              { "specifications.specName": x },
+              { "specifications.specValue": { $in: req.body.filters[key][x] } },
+            ],
+          });
+        }
+      }
+      findArgs["$and"] = query1;
+    } else if (key === "price") {
+      // gte -  greater than price [0-10]
+      // lte - less than
+      if (req.body.filters[key].length > 0) {
+        findArgs[key] = {
+          $gte: req.body.filters[key][0],
+          $lte: req.body.filters[key][1],
+        };
+      }
+    } else {
+      if (req.body.filters[key].length > 0) {
+        findArgs[key] = req.body.filters[key];
+      }
+    }
+    //}
+  }
+
+  //console.log(findArgs);
+
+  Product.aggregate([
+    { $match: findArgs },
+    { $unwind: "$specifications" },
+    {
+      $project: {
+        name: "$specifications.specName",
+        value: { name: "$specifications.specValue" },
+        _id: 0,
+      },
+    },
+    {
+      $group: {
+        _id: "$name",
+        values: { $addToSet: "$value" },
+      },
+    },
+  ]).exec((err, data) => {
+    if (err) {
+      return res.status(400).json({
+        error: err,
+      });
+    }
+    res.json({
+      data,
+    });
+  });
+};
+exports.addImagesToProduct = async (req, res) => {
+  const productId = req.query.id;
+  const productObj = {};
+
+  if (req.files && req.files.length > 0) {
+    productObj.productImages = [];
+    for (i in req.files) {
+      const prodFile = parser.format(
+        path.extname(req.files[i].originalname).toString(),
+        req.files[i].buffer
+      );
+      const uploadResult = await uploader.upload(prodFile.content);
+      productObj.productImages.push({ img: uploadResult.secure_url });
+    }
+  }
+
+  if (productId) {
+    Product.findOne({ _id: productId }).exec((error, product) => {
+      if (error) return res.status(400).json({ error });
+      if (product) {
+        Product.findOneAndUpdate(
+          { _id: productId },
+          { productImages: productObj.productImages },
+          { new: true }
+        ).exec((error, updatedProduct) => {
+          if (error) return res.status(400).json({ error });
+          if (updatedProduct) {
+            return res.status(201).json({ product: updatedProduct });
+          }
+        });
+      } else {
+        return res.status(400).json({ error: "Invalid product ID" });
+      }
+    });
+  } else {
+    if (error) return res.status(400).json({ error: "Provide product ID" });
+  }
+};
+
+exports.addSpecificationsToProduct = (req, res) => {
+  const productId = req.query.id;
+  if (productId) {
+    Product.findOne({ _id: productId }).exec((error, product) => {
+      if (error) return res.status(400).json({ error });
+      if (product) {
+        //console.log("Specs are " + JSON.stringify(req.body.specs));
+        const specification = JSON.parse(req.body.specs);
+        if (specification) {
+          product.specifications = [];
+          // const specification = JSON.parse(req.body.specs);
+          // console.log("Specifications are " + JSON.stringify(specification));
+          for (i in specification) {
+            product.specifications.push({
+              specType: specification[i][0],
+              specName: specification[i][1],
+              specValue: specification[i][2],
+              // filterable: specification[i][3],
+            });
+          }
+          //product.specifications.push(_specifications);
+          product.save((err, prod) => {
+            if (err) {
+              res.status(400).json({
+                message: err,
+              });
+            }
+            if (prod) {
+              return res.status(201).json({
+                product: prod,
+                message: "Specs saved sucessfully",
+              });
+            }
+          });
+        } else {
+          return res.status(400).json({ error: "Specs missing" });
+        }
+        /*Product.findOneAndUpdate(
+          { _id: productId },
+          { specifications: productObj.specifications },
+          { new: true }
+        ).exec((error, updatedProduct) => {
+          if (error) return res.status(400).json({ error });
+          if (updatedProduct) {
+            return res.status(201).json({ product: updatedProduct });
+          }
+        });*/
+      } else {
+        return res.status(400).json({ error: "Invalid product ID" });
+      }
+    });
+  } else {
+    if (error) return res.status(400).json({ error: "Provide product ID" });
+  }
+};
+
+exports.getProducts1 = (req, res) => {
+  let order = req.query.order ? slugify(req.query.order) : "slug";
+  let sortBy = req.query.sortBy ? req.query.sortBy : "_id";
+  const sortOrder = req.query.sortOrder
+    ? req.query.sortOrder === "lowest"
+      ? { price: 1 }
+      : { price: -1 }
+    : { _id: -1 };
+  let limit = req.query.limit ? parseInt(req.query.limit) : 10;
+  let skip = parseInt(req.query.skip);
+  let searchQuery = req.query.searchQuery;
+  let findArgs = {};
+
+  for (let key in req.query.filters) {
+    if (req.query.filters[key].length > 0) {
+      if (key === "price") {
+        findArgs[key] = {
+          $gte: req.query.filters[key][0],
+          $lte: req.query.filters[key][1],
+        };
+      } else {
+        findArgs[key] = req.query.filters[key];
+      }
+    }
+  }
+
+  //console.log(findArgs);
+
+  if (searchQuery) {
+    Product.find(findArgs)
+      .find({ $text: { $search: searchQuery } })
+      .populate("name")
+      .sort(sortOrder)
+      .skip(skip)
+      .limit(limit)
+      .exec((error, products) => {
+        if (error) return res.status(400).json({ success: false, error });
+        res
+          .status(200)
+          .json({ success: true, products, postSize: products.length });
+      });
+  } else {
+    Product.find(findArgs)
+      .populate("name")
+      .sort(sortOrder)
+      .skip(skip)
+      .limit(limit)
+      .exec((error, products) => {
+        if (error) return res.status(400).json({ success: false, error });
+        res
+          .status(200)
+          .json({ success: true, products, postSize: products.length });
+      });
+  }
+};
+
+exports.fetchProductDetails = (req, res) => {
+  const id = req.query.id ? { _id: req.query.id } : {};
+
+  Product.findOne({ ...id }).exec((error, product) => {
+    if (error)
+      return res.status(400).json({
+        error,
+      });
+    if (product) {
+      res.status(200).json({ product });
+    }
+  });
+};
+
+createProducts = (Products, parentId = null) => {
+  const productList = [];
+  let product;
+  if (parentId == null) {
+    product = Products.filter((prod) => prod.parentId == undefined);
+  } else {
+    product = Products.filter((prod) => prod.parentId == parentId);
+  }
+  for (let prod of product) {
+    productList.push({
+      _id: prod._id,
+      name: prod._name,
+      slug: prod.slug,
+      children: createProducts(products, prod._id),
+    });
+  }
+  return productList;
+};
+
+createCategories = (category, parentId = null) => {
+  const categoryList = [];
+  let category1;
+  if (parentId == null) {
+    category1 = category.filter((cat) => cat.parentId == undefined);
+  } else {
+    category1 = category.filter((cat) => cat.parentId == parentId);
+  }
+  for (let cat of category1) {
+    categoryList.push(createCategories(category, cat._id));
+  }
+  return categoryList;
 };
 
 /*
@@ -497,75 +805,6 @@ exports.getProductFilters = (req, res) => {
     });
 };
 */
-exports.getProducts1 = (req, res) => {
-  let order = req.query.order ? slugify(req.query.order) : "slug";
-  let sortBy = req.query.sortBy ? req.query.sortBy : "_id";
-  const sortOrder = req.query.sortOrder
-    ? req.query.sortOrder === "lowest"
-      ? { price: 1 }
-      : { price: -1 }
-    : { _id: -1 };
-  let limit = req.query.limit ? parseInt(req.query.limit) : 10;
-  let skip = parseInt(req.query.skip);
-  let searchQuery = req.query.searchQuery;
-  let findArgs = {};
-
-  for (let key in req.query.filters) {
-    if (req.query.filters[key].length > 0) {
-      if (key === "price") {
-        findArgs[key] = {
-          $gte: req.query.filters[key][0],
-          $lte: req.query.filters[key][1],
-        };
-      } else {
-        findArgs[key] = req.query.filters[key];
-      }
-    }
-  }
-
-  //console.log(findArgs);
-
-  if (searchQuery) {
-    Product.find(findArgs)
-      .find({ $text: { $search: searchQuery } })
-      .populate("name")
-      .sort(sortOrder)
-      .skip(skip)
-      .limit(limit)
-      .exec((error, products) => {
-        if (error) return res.status(400).json({ success: false, error });
-        res
-          .status(200)
-          .json({ success: true, products, postSize: products.length });
-      });
-  } else {
-    Product.find(findArgs)
-      .populate("name")
-      .sort(sortOrder)
-      .skip(skip)
-      .limit(limit)
-      .exec((error, products) => {
-        if (error) return res.status(400).json({ success: false, error });
-        res
-          .status(200)
-          .json({ success: true, products, postSize: products.length });
-      });
-  }
-};
-
-exports.fetchProductDetails = (req, res) => {
-  const id = req.query.id ? { _id: req.query.id } : {};
-
-  Product.findOne({ ...id }).exec((error, product) => {
-    if (error)
-      return res.status(400).json({
-        error,
-      });
-    if (product) {
-      res.status(200).json({ product });
-    }
-  });
-};
 
 /*const productId = req.body.productId;
   if (productId) {

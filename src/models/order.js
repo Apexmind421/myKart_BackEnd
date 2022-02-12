@@ -32,6 +32,14 @@ const orderSchema = new mongoose.Schema(
         },
       },
     ],
+    isPaid: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+    paidAt: {
+      type: Date,
+    },
     paymentStatus: {
       type: String,
       enum: ["pending", "completed", "cancelled", "refund"],
@@ -41,6 +49,19 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: ["cod", "card"],
       required: true,
+    },
+    paymentId: {
+      type: String,
+    },
+    taxPrice: {
+      type: Number,
+      required: true,
+      default: 0.0,
+    },
+    shippingPrice: {
+      type: Number,
+      required: true,
+      default: 0.0,
     },
     orderStatus: [
       {

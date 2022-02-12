@@ -16,6 +16,7 @@ const {
   addImagesToProduct,
   addProductVariant,
   addProductTags,
+  fetchTags,
 } = require("../controller/product");
 const { requireLogin } = require("../Validators/validation");
 const shortid = require("shortid");
@@ -52,24 +53,33 @@ const upload = multer({
 
 /*const upload = multer({ storage });*/
 
+//Create Product
 router.post(
   "/product/add",
   requireLogin,
   upload.array("productImages"),
   addProduct
 );
-console.log("i am inside!");
+
+//Search Products
 router.get("/product/fetch", fetchProducts);
+router.post("/product/getFilteredProducts", getProducts);
+router.post("/product/getProductFilters", getProductFilters);
+router.get("/product/fetchTags", fetchTags);
 router.get("/product", fetchProductDetails);
+router.get("/products/:slug", fetchProductsBySlug);
+router.get("/product1/:productId", fetchProductDetailsById);
 router.get("/product/reviews", updateProductReviews);
 router.get("/product/fetchCartProductDetails", fetchCartProductDetails);
 //router.get('/product/getFilteredProducts',getProducts);
-router.post("/product/getFilteredProducts", getProducts);
 //router.get('/product/fetchcategories',fetchCategories);
-router.get("/products/:slug", fetchProductsBySlug);
-router.get("/product1/:productId", fetchProductDetailsById);
-router.post("/product/getProductFilters", getProductFilters);
+
+//Delete Product
+
 router.delete("/product/deleteProductById", requireLogin, deleteProductById);
+
+//Add Product Details
+
 router.post("/product/addProductReview", requireLogin, addProductReview);
 router.post("/product/addProductVariant", requireLogin, addProductVariant);
 router.post("/product/addProductTags", requireLogin, addProductTags);

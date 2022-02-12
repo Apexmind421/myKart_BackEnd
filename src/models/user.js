@@ -4,17 +4,19 @@ const userSchema = new mongoose.Schema(
   {
     firstName: {
       type: String,
-      required: true,
       trim: true,
       min: 3,
       max: 20,
     },
     lastName: {
       type: String,
-      required: true,
       trim: true,
       min: 3,
       max: 20,
+    },
+    name: {
+      type: String,
+      required: [true, "Please tell us your name"],
     },
     username: {
       type: String,
@@ -40,10 +42,24 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "admin", "seller"],
       default: "user",
     },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    passwordChangedAt: Date,
+    address: {
+      type: String,
+    },
+    companyName: {
+      type: String,
+    },
     contactNumber: {
       type: String,
     },
     profilePicture: {
+      type: String,
+    },
+    discountCode: {
       type: String,
     },
   },
