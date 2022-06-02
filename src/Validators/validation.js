@@ -29,8 +29,8 @@ const storage = multer.diskStorage({
 exports.upload = multer({ storage });
 
 exports.validateRegisterRequest = [
-  check("firstName").notEmpty().withMessage("First Name is required"),
-  check("lastName").notEmpty().withMessage("Last Name is required"),
+  //check("firstName").notEmpty().withMessage("First Name is required"),
+  //check("lastName").notEmpty().withMessage("Last Name is required"),
   check("email").isEmail().withMessage("Valid Email is required"),
   check("password")
     .isLength({ min: 8 })
@@ -52,6 +52,7 @@ exports.isRequestValidated = (req, res, next) => {
   const errors = validationResult(req);
   // console.log("I am inside request validator");
   if (errors.array().length > 0) {
+    // console.log("I am inside request validator");
     return res.status(400).json({ errors: errors.array()[0].msg });
   }
   next();

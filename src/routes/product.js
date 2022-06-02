@@ -17,6 +17,11 @@ const {
   addProductVariant,
   addProductTags,
   fetchTags,
+  addOptions,
+  fetchProductVariantOptions,
+  addProductOptions,
+  fetchOptions,
+  getProductFilters2,
 } = require("../controller/product");
 const { requireLogin } = require("../Validators/validation");
 const shortid = require("shortid");
@@ -61,30 +66,17 @@ router.post(
   addProduct
 );
 
-//Search Products
-router.get("/product/fetch", fetchProducts);
-router.post("/product/getFilteredProducts", getProducts);
-router.post("/product/getProductFilters", getProductFilters);
-router.get("/product/fetchTags", fetchTags);
-router.get("/product", fetchProductDetails);
-router.get("/products/:slug", fetchProductsBySlug);
-router.get("/product1/:productId", fetchProductDetailsById);
-router.get("/product/reviews", updateProductReviews);
-router.get("/product/fetchCartProductDetails", fetchCartProductDetails);
-//router.get('/product/getFilteredProducts',getProducts);
-//router.get('/product/fetchcategories',fetchCategories);
-
-//Delete Product
-
-router.delete("/product/deleteProductById", requireLogin, deleteProductById);
+//Add Options
+router.post("/variantOption/add", requireLogin, addOptions);
+router.get("/variantOption", fetchOptions);
 
 //Add Product Details
-
-router.post("/product/addProductReview", requireLogin, addProductReview);
-router.post("/product/addProductVariant", requireLogin, addProductVariant);
-router.post("/product/addProductTags", requireLogin, addProductTags);
+router.post("/product/addProductReview", requireLogin, addProductReview); //AddProductReview
+router.post("/product/variant/add", requireLogin, addProductVariant); //AddProductVariant
+router.post("/product/tag/add", requireLogin, addProductTags); //AddProductTag
+router.post("/product/option/add", requireLogin, addProductOptions); //AddProductOptions
 router.post(
-  "/product/addSpecificationsToProduct",
+  "/product/specification/add",
   requireLogin,
   addSpecificationsToProduct
 );
@@ -94,6 +86,26 @@ router.post(
   upload.array("productImages"),
   addImagesToProduct
 );
+
+//Search Products
+router.get("/product/fetch1", fetchProducts);
+router.post("/product/getFilteredProducts", getProducts);
+router.post("/product/fetch", getProductFilters2);
+router.post("/product/getProductFilters", getProductFilters);
+router.get("/product/fetchTags", fetchTags);
+router.get("/product", fetchProductDetails);
+router.get("/products/:slug", fetchProductsBySlug);
+router.get("/product/details/:productId", fetchProductDetailsById);
+router.get("/product/reviews", updateProductReviews);
+router.get("/product/fetchCartProductDetails", fetchCartProductDetails);
+router.get("/product/variantOption", fetchProductVariantOptions);
+//router.get('/product/getFilteredProducts',getProducts);
+//router.get('/product/fetchcategories',fetchCategories);
+
+//Delete Product
+
+router.delete("/product/deleteProductById", requireLogin, deleteProductById);
+
 /*
 router.post(
   "/product/add",
@@ -102,4 +114,5 @@ router.post(
   addProduct
 );*/
 //router.post('/product/add',upload.array('productImages'), addProduct);
+
 module.exports = router;

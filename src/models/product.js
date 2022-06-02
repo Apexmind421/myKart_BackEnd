@@ -8,7 +8,7 @@ const reviewScehma = new mongoose.Schema({
 });
 
 const variantScehma = new mongoose.Schema({
-  variations: [
+  /* variations: [
     {
       varationName: {
         type: String,
@@ -16,6 +16,13 @@ const variantScehma = new mongoose.Schema({
       varationValue: {
         type: String,
       },
+    },
+  ],*/
+  variations: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ProductVariantOption",
+      required: true,
     },
   ],
   varaiantPrice: {
@@ -26,12 +33,12 @@ const variantScehma = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Product",
     required: true,
-  },
+  },*/
   sku: {
     type: String,
     required: true,
     trim: true,
-  },*/
+  },
   quantity: {
     type: Number,
     required: true,
@@ -88,6 +95,12 @@ const productScehma = new mongoose.Schema(
       },
     ],
     variants: [variantScehma],
+    options: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "ProductVariantOption",
+      },
+    ],
     rating: { type: Number, default: 5, required: true },
     numReviews: { type: Number, default: 0, required: true },
     reviews: [reviewScehma],

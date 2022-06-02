@@ -83,9 +83,16 @@ exports.addItemToCart2 = (req, res) => {
         }
 
         if (_cart) {
-          return res.status(201).json({
+          _cart
+            .populate("cartItems.product", "_id name price productImages")
+            .execPopulate((e, newcart) => {
+              return res.status(201).json({
+                cart: newcart,
+              });
+            });
+          /* return res.status(201).json({
             cart: _cart,
-          });
+          });*/
         }
       });
     } else {
@@ -96,25 +103,35 @@ exports.addItemToCart2 = (req, res) => {
       });
       cart.save((error, _cart) => {
         if (error) return res.status(400).json({ error });
-        if (_cart) return res.status(201).json({ cart });
+        if (_cart) {
+          _cart
+            .populate("cartItems.product", "_id name price productImages")
+            .execPopulate((e, newcart) => {
+              return res.status(201).json({
+                cart: newcart,
+              });
+            });
+          //return res.status(201).json({ cart });
+        }
       });
     }
   });
 };
 
 exports.removeItemFromCart = (req, res) => {
-  Cart.findOne({ user: req.user._id }).exec((error, cart) => {
+  console.log("Isdfhsdjkhfjkdshf");
+  Cart.findOne({ user: req.user._id }).exec((error, cart1) => {
     if (error) return res.status(400).json({ error });
-    if (cart) {
-      const productIndex = cart.cartItems.findIndex(
+    if (cart1) {
+      const productIndex = cart1.cartItems.findIndex(
         (_cart) => _cart.product == req.query.productId
       );
       console.log("productIndex " + productIndex);
       if (productIndex > -1) {
-        cart.cartItems.splice(productIndex, 1);
+        cart1.cartItems.splice(productIndex, 1);
       }
 
-      cart.save((error, _cart) => {
+      cart1.save((error, _cart) => {
         if (error) {
           res.status(400).json({
             message: "Something went wrong",
@@ -122,9 +139,16 @@ exports.removeItemFromCart = (req, res) => {
         }
 
         if (_cart) {
-          return res.status(201).json({
-            cart: _cart,
-          });
+          _cart
+            .populate("cartItems.product", "_id name price productImages")
+            .execPopulate((e, newcart) => {
+              return res.status(201).json({
+                cart: newcart,
+              });
+            });
+          //  return res.status(201).json({
+          //   cart: _cart,
+          // });
         }
       });
     }
@@ -132,16 +156,18 @@ exports.removeItemFromCart = (req, res) => {
 };
 
 exports.DisplayItemsInCart = (req, res) => {
-  Cart.findOne({ user: req.user._id }).exec((error, cart) => {
-    console.log("I am inside1");
-    if (error) return res.status(400).json({ error });
-    if (cart) {
-      console.log("I am inside2");
-      return res.status(200).json({ cart });
-    } else {
-      return res.status(202).json({});
-    }
-  });
+  Cart.findOne({ user: req.user._id })
+    .populate("cartItems.product", "_id name price productImages")
+    .exec((error, cart) => {
+      console.log("I am inside1");
+      if (error) return res.status(400).json({ error });
+      if (cart) {
+        console.log("I am inside2");
+        return res.status(200).json({ cart });
+      } else {
+        return res.status(202).json({});
+      }
+    });
 };
 
 exports.getCartItems = (req, res) => {

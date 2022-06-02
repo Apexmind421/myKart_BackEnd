@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema(
     },
     name: {
       type: String,
-      required: [true, "Please tell us your name"],
+      //required: [true, "Please tell us your name"],
     },
     username: {
       type: String,
@@ -61,6 +61,10 @@ const userSchema = new mongoose.Schema(
     },
     discountCode: {
       type: String,
+    },
+    pushTokens: {
+      type: Array,
+      //    required: true,
     },
   },
   { timestamps: true }
