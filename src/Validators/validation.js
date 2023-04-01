@@ -1,4 +1,4 @@
-const { check, validationResult } = require("express-validator");
+const { body, check, validationResult } = require("express-validator");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const path = require("path");
@@ -31,29 +31,51 @@ exports.upload = multer({ storage });
 exports.validateRegisterRequest = [
   //check("firstName").notEmpty().withMessage("First Name is required"),
   //check("lastName").notEmpty().withMessage("Last Name is required"),
-  check("email").isEmail().withMessage("Valid Email is required"),
+  check("email").trim().isEmail().withMessage("Valid Email is required"),
+  check("mobile")
+    .trim()
+    .isInt()
+    .isLength({ min: 10, max: 10 })
+    .matches(/^[6-9]\d{9}$/)
+    .withMessage("Valid Mobile is required"),
   check("password")
+    .trim()
     .isLength({ min: 8 })
-    .withMessage("Must be at least 8 charecters")
+    .withMessage("Password must be at least 8 charecters")
     .matches(/\d/)
-    .withMessage("must contain a number"),
+    .withMessage("Password must contain a number"),
+  check("passwordConfirmation")
+    .trim()
+    .custom(async (passwordConfirmation, { req }) => {
+      const password = req.body.password;
+      if (password !== passwordConfirmation) {
+        throw new Error("Passwords must be same");
+      }
+    }),
 ];
 
 exports.validateLoginRequest = [
-  check("email").isEmail().withMessage("Valid Email is required"),
+  check("mobile")
+    .trim()
+    .isInt()
+    .isLength({ min: 10, max: 10 })
+    .matches(/^[6-9]\d{9}$/)
+    .withMessage("Valid Mobile is required"),
   check("password")
+    .trim()
     .isLength({ min: 8 })
-    .withMessage("Must be at least 8 charecters")
+    .withMessage("Password must be at least 8 charecters")
     .matches(/\d/)
-    .withMessage("must contain a number"),
+    .withMessage("Password must contain a number"),
 ];
 
 exports.isRequestValidated = (req, res, next) => {
   const errors = validationResult(req);
-  // console.log("I am inside request validator");
   if (errors.array().length > 0) {
-    // console.log("I am inside request validator");
-    return res.status(400).json({ errors: errors.array()[0].msg });
+    return res.status(400).json({
+      status: "fail",
+      errors: errors.array()[0].msg,
+    });
   }
   next();
 };
@@ -65,7 +87,7 @@ exports.requireLogin = (req, res, next) => {
     //console.log("User is " + JSON.stringify(user));
     req.user = user;
   } else {
-    return res.status(400).json({ message: "Require sign in" });
+    return res.status(400).json({ status: "fail", message: "Require sign in" });
   }
   next();
 };
@@ -73,7 +95,7 @@ exports.requireLogin = (req, res, next) => {
 exports.middleware = (req, res, next) => {
   // console.log(req.user.role);
   if (req.user.role !== "admin")
-    return res.status(400).json({ message: "Access Denied" });
+    return res.status(400).json({ status: "fail", message: "Access Denied" });
   next();
 };
 /*

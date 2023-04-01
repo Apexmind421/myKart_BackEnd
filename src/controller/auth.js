@@ -8,34 +8,41 @@ const parser = new DatauriParser();
 const { uploader } = require("../config/cloudinary.config");
 
 module.exports.register = (req, res) => {
-  User.findOne({ email: req.body.email }).exec(async (error, user) => {
+  User.findOne({ mobile: req.body.mobile }).exec(async (error, user) => {
+    //In case of any error in searching user send error.
     if (error)
       return res.status(400).json({
-        message: "User is not registered",
+        status: "fail",
+        message: "Something went wrong",
       });
+    //If user is already exist send error
     if (user) {
-      console.log("I am in user" + JSON.stringify(user));
       return res.status(401).json({
+        status: "fail",
         message: "User is already registered",
       });
-    } else {
-      const { email, password } = req.body;
+    }
+    //If user is not exist, create user
+    else {
+      const { email, mobile, password } = req.body;
       const hash_password = await bcrypt.hash(password, 10);
       const _user = new User({
         email,
+        mobile,
         hash_password,
         username: shortid.generate(),
       });
-      console.log("Data is " + JSON.stringify(_user));
       _user.save((error, data) => {
-        console.log("Data is " + JSON.stringify(data));
+        //send error in case of any error in user creation.
         if (error) {
-          console.log("Error is " + JSON.stringify(error));
           return res.status(400).json({
-            message: "Something went wrong",
+            status: "fail",
+            message: "Something went wrong" + error,
           });
         }
+
         if (data) {
+          console.log("test3");
           const token = jwt.sign(
             { _id: data._id, role: data.role },
             process.env.JWT_SECRET,
@@ -55,9 +62,14 @@ module.exports.register = (req, res) => {
             profilePicture,
             contactNumber,
             username,
-            isEmailVerified,
+            isMobileVerified,
+            referral_code,
+            isBlocked,
+            balance,
           } = data;
           return res.status(201).json({
+            status: "success",
+            message: "User created successfully",
             token,
             refreshtoken,
             user: {
@@ -69,10 +81,12 @@ module.exports.register = (req, res) => {
               username,
               contactNumber,
               profilePicture,
-              isEmailVerified,
+              isMobileVerified,
+              referral_code,
+              isBlocked,
+              balance,
             },
             expireTime: Date.now() + 60 * 60 * 1000,
-            message: "User created successfully",
           });
         }
       });
@@ -81,10 +95,10 @@ module.exports.register = (req, res) => {
 };
 
 module.exports.login = (req, res) => {
-  User.findOne({ email: req.body.email }).exec((error, user) => {
+  User.findOne({ mobile: req.body.mobile }).exec((error, user) => {
     if (error)
       return res.status(400).json({
-        message: "User is not registered",
+        message: "Something went wrong",
       });
     if (user) {
       if (user.authenticate(req.body.password)) {
@@ -107,7 +121,10 @@ module.exports.login = (req, res) => {
           profilePicture,
           contactNumber,
           username,
-          isEmailVerified,
+          isMobileVerified,
+          referral_code,
+          isBlocked,
+          balance,
         } = user;
         res.cookie("token", token, { expiresIn: "1d" });
         return res.status(200).json({
@@ -122,7 +139,10 @@ module.exports.login = (req, res) => {
             username,
             contactNumber,
             profilePicture,
-            isEmailVerified,
+            isMobileVerified,
+            referral_code,
+            isBlocked,
+            balance,
           },
           expireTime: Date.now() + 60 * 60 * 1000,
           message: "User exists",
@@ -134,7 +154,7 @@ module.exports.login = (req, res) => {
       }
     } else {
       return res.status(400).json({
-        message: "Something went wrong",
+        message: "User is not registered",
       });
     }
   });
@@ -167,25 +187,17 @@ module.exports.refreshToken = (req, res, next) => {
 
 module.exports.user_edit = (req, res) => {
   // const { id } = req.params;
-
   User.findOne({ _id: req.user._id }).exec((error, user) => {
-    console.log("XXX 1 is " + JSON.stringify(user));
+    //console.log("XXX 1 is " + JSON.stringify(user));
     if (error) return res.status(400).json({ error });
     if (user) {
-      console.log("XXX is " + JSON.stringify(user));
+      //console.log("XXX is " + JSON.stringify(user));
       if (req.body) {
         if (req.body.firstName) {
           user.firstName = req.body.firstName;
         }
         if (req.body.lastName) {
           user.lastName = req.body.lastName;
-        }
-        if (req.body.isEmailVerified) {
-          user.isEmailVerified = req.body.isEmailVerified;
-        }
-        if (req.body.contactNumber) {
-          user.contactNumber = req.body.contactNumber;
-          console.log("XXX is " + JSON.stringify(req.body.contactNumber));
         }
         if (req.body.email) {
           user.email = req.body.email;
@@ -205,9 +217,9 @@ module.exports.user_edit = (req, res) => {
               email,
               role,
               profilePicture,
-              contactNumber,
+              mobile,
               username,
-              isEmailVerified,
+              isMobileVerified,
             } = _user;
             return res.status(200).json({
               user: {
@@ -217,9 +229,9 @@ module.exports.user_edit = (req, res) => {
                 email,
                 role,
                 username,
-                contactNumber,
+                mobile,
                 profilePicture,
-                isEmailVerified,
+                isMobileVerified,
               },
             });
           }
@@ -237,10 +249,8 @@ module.exports.user_photoUpload = async (req, res) => {
   //const host = process.env.HOST_NAME;
   //  const { id } = req.params;
   const id = req.query.id;
-  console.log("I am in 0");
   let userProfileImage;
   if (req.files && req.files.length > 0) {
-    console.log("I am in 1" + req.user._id);
     const prodFile = parser.format(
       path.extname(req.files[0].originalname).toString(),
       req.files[0].buffer
@@ -248,50 +258,28 @@ module.exports.user_photoUpload = async (req, res) => {
     const uploadResult = await uploader.upload(prodFile.content);
     userProfileImage = uploadResult.secure_url;
     if (userProfileImage) {
-      console.log("I am in 1.5");
       User.findOne({ _id: req.user._id }).exec((error, user) => {
         if (error) return res.status(400).json({ error });
         if (user) {
-          console.log("I am in 2");
           user.profilePicture = userProfileImage;
           user.save((err, _user) => {
-            console.log("I am in 2.5");
             if (err) {
-              console.log("I am in 3" + JSON.stringify(err));
               return res.status(400).json({
                 message: "Something went wrong",
               });
             }
             if (_user) {
-              console.log("I am in 3.5");
-              const {
-                _id,
-                firstName,
-                lastName,
-                email,
-                role,
-                profilePicture,
-                contactNumber,
-                username,
-                isEmailVerified,
-              } = _user;
+              const { _id, profilePicture } = _user;
               return res.status(200).json({
+                status: "success",
                 user: {
                   _id,
-                  firstName,
-                  lastName,
-                  email,
-                  role,
-                  username,
-                  contactNumber,
                   profilePicture,
-                  isEmailVerified,
                 },
               });
             }
           });
         } else {
-          console.log("I am in 4.0");
           return res.status(400).json({
             message: "Something went wrong",
           });
@@ -328,6 +316,7 @@ const user_resetpw = async (req, res) => {
 
   sendEmail();
 };
+
 const user_receivepw = async (req, res) => {
   const { userId, token } = req.params;
   const { password } = req.body;
@@ -375,4 +364,22 @@ module.exports.requireLogin = (req, res, next) => {
   const user = jwt.verify(token, process.env.JWT_SECRET);
   req.user = user;
   next();
+};
+
+module.exports.deleteUserById = (req, res) => {
+  User.findOne({ _id: req.user._id }).exec((err, user) => {
+    if (err) return res.status(400).json({ message: "User is not registered" });
+    if (user) {
+      User.deleteOne({ _id: req.user._id }).exec((error, result) => {
+        if (error) return res.status(400).json({ message: "fail", error });
+        if (result) {
+          res.status(202).json({ message: "success", result });
+        }
+      });
+    } else {
+      return res.status(400).json({
+        message: "Something went wrong",
+      });
+    }
+  });
 };

@@ -1,21 +1,25 @@
 const mongoose = require("mongoose");
-const optionScehma = new mongoose.Schema(
+const attributeScehma = new mongoose.Schema(
   {
-    variantName: {
+    attribute: {
       type: String,
       required: true,
       lowercase: true,
       trim: true,
       //unique: true,
     },
-    variantValue: {
+    value: {
       type: String,
       required: true,
       lowercase: true,
       trim: true,
     },
+    status: {
+      type: Boolean,
+      default: true,
+    },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("ProductVariantOption", optionScehma);
+module.exports = mongoose.model("Attribute", attributeScehma);

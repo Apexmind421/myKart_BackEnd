@@ -3,6 +3,7 @@ const env = require("dotenv");
 const mongoose = require("mongoose");
 const app = express();
 const path = require("path");
+const { notFound, errorHandler } = require("./middlewares/errorHandler");
 
 //routes
 const authRoutes = require("./routes/auth");
@@ -17,7 +18,8 @@ const initialDataRoutes = require("./routes/admin/initialData");
 const orderRoutes = require("./routes/order");
 const questionRoutes = require("./routes/questions");
 const couponRoutes = require("./routes/coupon");
-const {cloudinaryConfig} = require('./config/cloudinary.config');
+const attributeRoutes = require("./routes/attribute");
+const { cloudinaryConfig } = require("./config/cloudinary.config");
 const cors = require("cors");
 
 //environment variable
@@ -25,13 +27,13 @@ env.config();
 
 //MongoDB Congifuration
 //mongodb+srv://dbadmin:<password>@cluster0.0ozae.mongodb.net/<dbname>?retryWrites=true&w=majority
+mongoose.set("strictQuery", false);
 mongoose
   .connect(
     `mongodb+srv://${process.env.MONGO_DB_USER}:${process.env.MONGO_DB_PASSWORD}@cluster0.0ozae.mongodb.net/${process.env.MONGO_DB_NAME}?retryWrites=true&w=majority`,
     {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      useCreateIndex: true,
     }
   )
   .then(() => {
@@ -41,13 +43,14 @@ mongoose
 //To parse JSON on response in Post. Acts as mediator
 app.use(cors());
 app.use(express.json());
-app.use('*', cloudinaryConfig);
+app.use("*", cloudinaryConfig);
 app.use("/public", express.static(path.join(__dirname, "/uploads/")));
 app.use("/api", authRoutes);
 app.use("/api", adminAuthRoutes);
 app.use("/api", catRoutes);
 app.use("/api", prodRoutes);
 app.use("/api", cartRoutes);
+app.use("/api", attributeRoutes);
 app.use("/api", pageRoutes);
 app.use("/api", addressRoutes);
 app.use("/api", initialDataRoutes);
@@ -55,6 +58,10 @@ app.use("/api", orderRoutes);
 app.use("/api", questionRoutes); //Added Questions Route
 app.use("/api", favoriteRoutes);
 app.use("/api", couponRoutes);
+
+app.use(notFound);
+app.use(errorHandler);
+
 // Listen to port in environment file
 app.listen(process.env.PORT, () => {
   console.log(`Server has been started and listening on ${process.env.PORT}`);

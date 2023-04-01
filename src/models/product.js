@@ -57,6 +57,7 @@ const productScehma = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      lowercase: true,
     },
     brand: {
       type: String,

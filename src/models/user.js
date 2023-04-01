@@ -33,6 +33,11 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
     },
+    mobile: {
+      type: Number,
+      required: true,
+      unique: true,
+    },
     hash_password: {
       type: String,
       required: true,
@@ -46,14 +51,11 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    passwordChangedAt: Date,
+    isMobileVerified: {
+      type: Boolean,
+      default: false,
+    },
     address: {
-      type: String,
-    },
-    companyName: {
-      type: String,
-    },
-    contactNumber: {
       type: String,
     },
     profilePicture: {
@@ -66,6 +68,18 @@ const userSchema = new mongoose.Schema(
       type: Array,
       //    required: true,
     },
+    referral_code: {
+      type: String,
+    },
+    referred_by: { type: String },
+    isBlocked: {
+      type: Boolean,
+      default: false,
+    },
+    balance: { type: Number, default: 0.0 },
+    passwordChangedAt: Date,
+    passwordResetToken: String,
+    passwordResetExpires: Date,
   },
   { timestamps: true }
 );
@@ -76,7 +90,6 @@ const userSchema = new mongoose.Schema(
 //});
 
 userSchema.virtual("fullName").get(function (pwd) {
-  console.log("This has been read");
   return `${this.firstName}${this.lastName}`;
 });
 

@@ -5,6 +5,7 @@ const {
   register,
   login,
   user_edit,
+  deleteUserById,
   refreshToken,
   user_photoUpload,
 } = require("../controller/auth");
@@ -35,17 +36,23 @@ const upload = multer({
   },
 });
 router.post("/login", validateLoginRequest, isRequestValidated, login);
-
 router.post("/register", validateRegisterRequest, isRequestValidated, register);
-
 router.post("/refresh-token", refreshToken);
-
 router.patch("/user/info", requireLogin, user_edit);
-
 router.patch(
   "/user/photo",
   requireLogin,
   upload.array("profilePicture"),
   user_photoUpload
 );
+//Delete User
+router.delete("/user", requireLogin, deleteUserById);
+
+//TO DO::
+//Log out
+//Reset password
+//Forgot password
+//Send verfication code
+//Verify verfication code
+
 module.exports = router;

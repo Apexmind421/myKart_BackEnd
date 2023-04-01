@@ -45,7 +45,7 @@ router.post(
   "/category/add",
   requireLogin,
   //middleware,
-  upload.array("categoryImages"),
+  upload.array("categoryImage"),
   addCategory
 );
 
@@ -57,7 +57,7 @@ router.post(
   "/category/modify",
   requireLogin,
   middleware,
-  upload.array("categoryImages"),
+  upload.array("categoryImage"),
   modifyCategories
 );
 
