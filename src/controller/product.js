@@ -1,6 +1,7 @@
 const Product = require("../models/product");
 const Category = require("../models/category");
-const ProductVariantOption = require("../models/productVariantOption");
+const ProductViewHistory = require("../models/productViews");
+const Attribute = require("../models/attribute");
 const ProductVariant = require("../models/productVariant");
 const User = require("../models/user");
 const slugify = require("slugify");
@@ -13,6 +14,49 @@ const path = require("path");
 const parser = new DatauriParser();
 const { uploader } = require("../config/cloudinary.config");
 
+const validateMongoDbId = require("../Validators/validateMongodbId");
+
+createProducts = (Products, parentId = null) => {
+  const productList = [];
+  let product;
+  if (parentId == null) {
+    product = Products.filter((prod) => prod.parentId == undefined);
+  } else {
+    product = Products.filter((prod) => prod.parentId == parentId);
+  }
+  for (let prod of product) {
+    productList.push({
+      _id: prod._id,
+      name: prod._name,
+      slug: prod.slug,
+      children: createProducts(products, prod._id),
+    });
+  }
+  return productList;
+};
+createCategories = (category, parentId = null) => {
+  const categoryList = [];
+  let category1;
+  if (parentId == null) {
+    category1 = category.filter((cat) => cat.parentId == undefined);
+  } else {
+    category1 = category.filter((cat) => cat.parentId == parentId);
+  }
+  for (let cat of category1) {
+    categoryList.push(createCategories(category, cat._id));
+  }
+  return categoryList;
+};
+
+/***************************************
+ * 
+ * 
+ * 
+  Product Add methods - Start here
+ * 
+ * 
+ * 
+***************************************/
 exports.addProduct = async (req, res) => {
   const productObj = {
     name: req.body.name,
@@ -30,8 +74,9 @@ exports.addProduct = async (req, res) => {
     weightInCM: req.body.weightInCM,
     heightInCM: req.body.heightInCM,
     WeightInGrams: req.body.WeightInGrams,
+    flashsale: req.body.flashsale,
   };
-
+  /*
   if (req.files && req.files.length > 0) {
     productObj.productImages = [];
     for (i in req.files) {
@@ -43,20 +88,37 @@ exports.addProduct = async (req, res) => {
       productObj.productImages.push({ img: uploadResult.secure_url });
     }
   }
+*/
+  if (req.files && req.files.length > 0) {
+    console.log("I am here 00007");
+    productObj.productImages = [];
+    for (i in req.files) {
+      const prodFile = parser.format(
+        path.extname(req.files[i].originalname).toString(),
+        req.files[i].buffer
+      );
 
-  if (req.body.tags) {
-    const _tags = JSON.parse(req.body.tags);
-    productObj.tags = [];
-    for (i in _tags) {
-      productObj.tags.push(_tags[i].toLowerCase());
+      const uploadResult = await uploader.upload(prodFile.content);
+      if (i == 0) {
+        productObj.thumbnailImage = uploadResult.secure_url;
+      } else productObj.productImages.push({ img: uploadResult.secure_url });
     }
   }
 
+  /*
   if (req.body.avialableCities) {
     const avialableCities = JSON.parse(req.body.avialableCities);
     productObj.avialableCities = [];
     for (i in avialableCities) {
       productObj.avialableCities.push(avialableCities[i]);
+    }
+  }
+*/
+  if (req.body.tags) {
+    const _tags = JSON.parse(req.body.tags);
+    productObj.tags = [];
+    for (i in _tags) {
+      productObj.tags.push(_tags[i].toLowerCase());
     }
   }
 
@@ -80,23 +142,782 @@ exports.addProduct = async (req, res) => {
     }
   }
 
-  if (req.body.options) {
-    productObj.options = [];
-    const option = JSON.parse(req.body.options);
-    for (i in option) {
-      product.options.push(option[i]);
+  if (req.body.attributes) {
+    productObj.attributes = [];
+    const attribute = JSON.parse(req.body.attributes);
+    for (i in attribute) {
+      productObj.attributes.push(attribute[i]);
     }
   }
+  /*
+  if (req.body.productVariants) {
+    product.variants = [];
+    const productVariants = JSON.parse(req.body.productVariants);
+    for (i in productVariants) {
+      let _variant = [];
+      const variantBody = productVariants[i];
+      for (i in variantBody) {
+        _variant.push(variantBody[i]);
+      }
 
+      const variant = {
+        variations: _variant,
+        varaiantPrice: req.body.varaiantPrice,
+        quantity: req.body.quantity,
+        sku: Math.random().toString(36).substring(2, 11),
+      };
+      product.variants.push(variant);
+    }
+  }
+  */
+
+  console.log("addProduct 001 " + JSON.stringify(productObj));
   const _prod = new Product(productObj);
   _prod.save((error, product) => {
     if (error) return res.status(400).json({ error });
-    if (product) return res.status(201).json({ product });
+    if (product) {
+      if (req.body.productVariants) {
+        const variantObjArray = [];
+        const productVariants = req.body.productVariants;
+        for (j in productVariants) {
+          let _variant = [];
+          const variantBody = productVariants[j].variants;
+          for (i in variantBody) {
+            _variant.push(variantBody[i]);
+          }
+          const variantObj = {
+            variations: _variant,
+            price: productVariants[j].price,
+            quantity: productVariants[j].quantity,
+            discount: productVariants[j].discount
+              ? productVariants[j].discount
+              : "",
+            shippingCost: productVariants[j].shippingCost
+              ? productVariants[j].shippingCost
+              : "",
+            lengthInCM: productVariants[j].lengthInCM
+              ? productVariants[j].lengthInCM
+              : "",
+            widthInCM: productVariants[j].widthInCM
+              ? productVariants[j].widthInCM
+              : "",
+            heightInCM: productVariants[j].heightInCM
+              ? productVariants[j].heightInCM
+              : "",
+            WeightInGrams: productVariants[j].WeightInGrams
+              ? productVariants[j].WeightInGrams
+              : "",
+            product: product._id,
+            sku: Math.random().toString(36).substring(2, 11),
+          };
+          variantObjArray.push(variantObj);
+        }
+        ProductVariant.insertMany(variantObjArray).then((err, _prodVariant) => {
+          if (err) {
+            res.status(400).json({
+              message: err,
+            });
+          }
+          if (_prodVariant) {
+            return res.status(201).json({
+              product: product,
+              productVariants: _prodVariant,
+              message: "Product created sucessfully",
+            });
+          }
+        });
+      } else {
+        return res.status(201).json({
+          product: product,
+          message: "Product created sucessfully",
+        });
+      }
+    } else return res.status(400).json({ message: "Could not create product" });
   });
 
   //res.status(200).json({file: req.files, body: req.body});
 };
+exports.addProductTags = (req, res) => {
+  const productId = req.query.productId;
+  if (productId) {
+    Product.findOne({ _id: productId }).exec((error, product) => {
+      if (error) return res.status(400).json({ error });
+      if (product) {
+        if (req.body.tags && req.body.tags.length > 0) {
+          const _tags = req.body.tags;
+          //product.tags = [];
+          for (i in _tags) {
+            const tagIndex = product.tags.findIndex((x) => x == _tags[i]);
+            if (tagIndex < 0) product.tags.push(_tags[i]);
+          }
+          product.save((err, prod) => {
+            if (err) {
+              res.status(400).json({
+                message: err,
+              });
+            }
+            if (prod) {
+              return res.status(201).json({
+                product: prod,
+                message: "tags saved sucessfully",
+              });
+            }
+          });
+        } else {
+          return res.status(400).json({ error: "Tags are required" });
+        }
+      }
+    });
+  } else {
+    return res.status(400).json({ error: "Product ID is required" });
+  }
+};
+exports.addImagesToProduct = async (req, res) => {
+  const productId = req.query.id;
+  const productObj = {};
 
+  if (req.files && req.files.length > 0) {
+    productObj.productImages = [];
+    for (i in req.files) {
+      const prodFile = parser.format(
+        path.extname(req.files[i].originalname).toString(),
+        req.files[i].buffer
+      );
+      const uploadResult = await uploader.upload(prodFile.content);
+      productObj.productImages.push({ img: uploadResult.secure_url });
+    }
+  }
+
+  if (productId) {
+    Product.findOne({ _id: productId }).exec((error, product) => {
+      if (error) return res.status(400).json({ error });
+      if (product) {
+        Product.findOneAndUpdate(
+          { _id: productId },
+          { productImages: productObj.productImages },
+          { new: true }
+        ).exec((error, updatedProduct) => {
+          if (error) return res.status(400).json({ error });
+          if (updatedProduct) {
+            return res.status(201).json({ product: updatedProduct });
+          }
+        });
+      } else {
+        return res.status(400).json({ error: "Invalid product ID" });
+      }
+    });
+  } else {
+    if (error) return res.status(400).json({ error: "Provide product ID" });
+  }
+};
+exports.addSpecificationsToProduct = (req, res) => {
+  const productId = req.query.id;
+  if (productId) {
+    Product.findOne({ _id: productId }).exec((error, product) => {
+      if (error) return res.status(400).json({ error });
+      if (product) {
+        //console.log("Specs are " + JSON.stringify(req.body.specs));
+        const specification = JSON.parse(req.body.specs);
+        if (specification) {
+          product.specifications = [];
+          // const specification = JSON.parse(req.body.specs);
+          // console.log("Specifications are " + JSON.stringify(specification));
+          for (i in specification) {
+            product.specifications.push({
+              specType: specification[i][0],
+              specName: specification[i][1],
+              specValue: specification[i][2],
+              // filterable: specification[i][3],
+            });
+          }
+          //product.specifications.push(_specifications);
+          product.save((err, prod) => {
+            if (err) {
+              res.status(400).json({
+                message: err,
+              });
+            }
+            if (prod) {
+              return res.status(201).json({
+                product: prod,
+                message: "Specs saved sucessfully",
+              });
+            }
+          });
+        } else {
+          return res.status(400).json({ error: "Specs missing" });
+        }
+        /*Product.findOneAndUpdate(
+          { _id: productId },
+          { specifications: productObj.specifications },
+          { new: true }
+        ).exec((error, updatedProduct) => {
+          if (error) return res.status(400).json({ error });
+          if (updatedProduct) {
+            return res.status(201).json({ product: updatedProduct });
+          }
+        });*/
+      } else {
+        return res.status(400).json({ error: "Invalid product ID" });
+      }
+    });
+  } else {
+    if (error) return res.status(400).json({ error: "Provide product ID" });
+  }
+};
+exports.addProductAttributes = (req, res) => {
+  const productId = req.query.id;
+  console.log("Prod ID is ", productId);
+  if (productId) {
+    Product.findOne({ _id: productId }).exec((error, product) => {
+      if (error) return res.status(400).json({ error });
+      if (product) {
+        const attributes =
+          //JSON.parse(
+          req.body.attributes;
+        //);
+        if (attributes) {
+          /*  product.attributes = [];
+          for (i in attributes) {
+            product.attributes.push(attributes[i]);
+          }*/
+          if (product.attributes) {
+            ProductVariant.deleteMany({
+              product: productId,
+            }).exec((error, result) => {
+              if (error)
+                console.log("Error occured in deleting productVariants");
+              if (result) {
+                console.log("Successfully deleted productVariants");
+              }
+            });
+          }
+          product.attributes = attributes;
+          console.log("Specs are " + JSON.stringify(product.attributes));
+          product.save((err, prod) => {
+            if (err) {
+              res.status(400).json({
+                message: err,
+              });
+            }
+            if (prod) {
+              /*const deleteVariants = ProductVariant.deleteMany({
+                product: productId,
+              });*/
+
+              return res.status(201).json({
+                product: prod,
+                message: "Attributes saved sucessfully",
+              });
+            }
+          });
+        } else {
+          return res.status(400).json({ error: "Attributes missing" });
+        }
+      } else {
+        return res.status(400).json({ error: "Invalid product ID" });
+      }
+    });
+  } else {
+    if (error) return res.status(400).json({ error: "Provide product ID" });
+  }
+};
+/***************************************
+ * 
+ * 
+ * 
+  Product Update method - Start here
+ * 
+ * 
+ * 
+***************************************/
+exports.updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    validateMongoDbId(id);
+    //  console.log("xxx 1 " + JSON.stringify(req.body));
+    if (req.body.name) {
+      req.body.slug = slugify(req.body.name);
+    }
+    const productObj = req.body;
+    /* if (req.files && req.files.length > 0) {
+      productObj.productImages = [];
+      for (i in req.files) {
+        const prodFile = parser.format(
+          path.extname(req.files[i].originalname).toString(),
+          req.files[i].buffer
+        );
+        const uploadResult = await uploader.upload(prodFile.content);
+        productObj.productImages.push({ img: uploadResult.secure_url });
+      }
+    }*/
+    console.log("xxx 2 " + JSON.stringify(productObj));
+    const _updateProduct = await Product.findByIdAndUpdate(id, productObj, {
+      new: true,
+    });
+    res.status(200).json(_updateProduct);
+  } catch (error) {
+    //throw new Error(error);
+    return res.status(400).json({ message: err.message });
+  }
+};
+
+/***************************************
+ * 
+ * 
+ * 
+  Product Variant methods - Start here
+ * 
+ * 
+ * 
+***************************************/
+//Check if product ID is present
+//Then check if there is a varaint with the same varaintoptions,
+//Update it if there is
+//Other wise add it.
+exports.addProductVariant = (req, res) => {
+  //console.log("product ID is " + req.user._id);
+  const productId = req.query.productId;
+  if (productId) {
+    Product.findOne({ _id: productId }).exec((error, product) => {
+      if (error) return res.status(400).json({ error });
+      if (product) {
+        //console.log("I am adding prod variant" + JSON.parse(req.body));
+        if (req.body.productVariants) {
+          const variantObjArray = [];
+          const productVariants = req.body.productVariants;
+          for (j in productVariants) {
+            let _variant = [];
+            const variantBody = productVariants[j].variants;
+            for (i in variantBody) {
+              _variant.push(variantBody[i]);
+            }
+            const variantObj = {
+              variations: _variant,
+              price: productVariants[j].price,
+              quantity: productVariants[j].quantity,
+              discount: productVariants[j].discount
+                ? productVariants[j].discount
+                : 0,
+              shippingCost: productVariants[j].shippingCost
+                ? productVariants[j].shippingCost
+                : 0,
+              lengthInCM: productVariants[j].lengthInCM
+                ? productVariants[j].lengthInCM
+                : "",
+              widthInCM: productVariants[j].widthInCM
+                ? productVariants[j].widthInCM
+                : "",
+              heightInCM: productVariants[j].heightInCM
+                ? productVariants[j].heightInCM
+                : "",
+              WeightInGrams: productVariants[j].WeightInGrams
+                ? productVariants[j].WeightInGrams
+                : "",
+              product: product._id,
+              sku: Math.random().toString(36).substring(2, 11),
+            };
+            variantObjArray.push(variantObj);
+          }
+          ProductVariant.insertMany(variantObjArray)
+            //  .populate("variations")
+            .then((err, _prodVariant) => {
+              if (err) {
+                return res.status(400).json({ err });
+              }
+              if (_prodVariant) {
+                return res.status(201).json({
+                  product: prod,
+                  productVariants: _prodVariant,
+                  message: "Variants saved sucessfully",
+                });
+              }
+            });
+        } else {
+          return res.status(400).json({ error: "Varaiants are required" });
+        }
+      }
+    });
+  } else {
+    return res.status(400).json({ error: "Product ID is required" });
+  }
+};
+//Update the productVariant using the varaint ID
+exports.updateProductVariant = async (req, res) => {
+  //Check if product and productVaraint are been provided
+  //If provided, check if they exist
+  //If they exist, update the productVaraint
+  try {
+    const { productId, varaintId } = req.query;
+    if (productId && varaintId) {
+      const productExist = await Product.findOne({ _id: productId });
+      const varaintExist = await ProductVariant.findOne({ _id: varaintId });
+      if (productExist && varaintExist) {
+        let updateVariantObj = req.body;
+        const updateVariantStatus = await ProductVariant.findByIdAndUpdate(
+          varaintId,
+          updateVariantObj,
+          { new: true, upsert: true }
+        );
+        res.json(updateVariantStatus);
+      } else {
+        return res.status(400).json({ error: "Invalid Inputs" });
+      }
+    } else {
+      return res.status(400).json({ error: "Missing inputs" });
+    }
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+//Search the productVariant using the varaint ID
+exports.fetchProductVariants = async (req, res) => {
+  const findArgs = req.query.id ? { product: req.query.id } : {};
+  ProductVariant.find(findArgs).exec((err, data) => {
+    if (err) {
+      return res.status(400).json({
+        error: "Variants are not found" + err,
+      });
+    }
+    res.json({
+      size: data.length,
+      data,
+    });
+  });
+};
+//Delete the productVaraint using the varinat ID
+exports.deleteProductVariant = (req, res) => {
+  const variantId = req.query.id;
+  if (variantId) {
+    ProductVariant.deleteOne({ _id: variantId }).exec((error, result) => {
+      if (error) return res.status(400).json({ error });
+      if (result) {
+        res.status(202).json({ result });
+      }
+    });
+  } else {
+    res.status(400).json({ error: "Params required" });
+  }
+};
+exports.addProductVariant1 = (req, res) => {
+  //console.log("product ID is " + req.user._id);
+  const productId = req.query.productId;
+  if (productId) {
+    Product.findOne({ _id: productId }).exec((error, product) => {
+      if (error) return res.status(400).json({ error });
+      if (product) {
+        //console.log("I am adding prod variant" + JSON.parse(req.body));
+        if (req.body.variants) {
+          let _variant = [];
+          // const variantBody = JSON.parse(req.body.variants);
+          console.log(
+            "I am adding prod variant" + JSON.stringify(req.body.variants)
+          );
+          const variantBody = req.body.variants;
+          for (i in variantBody) {
+            _variant.push(variantBody[i]);
+          }
+
+          const variant = {
+            variations: _variant,
+            varaiantPrice: req.body.varaiantPrice,
+            quantity: req.body.quantity,
+            sku: Math.random().toString(36).substring(2, 11),
+          };
+          product.variants.push(variant);
+          product.save((err, prod) => {
+            if (err) {
+              res.status(400).json({
+                message: err,
+              });
+            }
+            if (prod) {
+              return res.status(201).json({
+                product: prod,
+                message: "Variants saved sucessfully",
+              });
+            }
+          });
+        } else {
+          return res.status(400).json({ error: "Varaiants are required" });
+        }
+      }
+    });
+  } else {
+    return res.status(400).json({ error: "Product ID is required" });
+  }
+};
+exports.addProductVariant2 = (req, res) => {
+  //console.log("product ID is " + req.user._id);
+  const productId = req.query.productId;
+  if (productId) {
+    Product.findOne({ _id: productId }).exec((error, product) => {
+      if (error) return res.status(400).json({ error });
+      if (product) {
+        //console.log("I am adding prod variant" + JSON.parse(req.body));
+        if (req.body.productVariants) {
+          // product.variants=[];
+          const productVariants = req.body.productVariants;
+          for (j in productVariants) {
+            let _variant = [];
+            const variantBody = productVariants[j].variants;
+            for (i in variantBody) {
+              _variant.push(variantBody[i]);
+            }
+            console.log(
+              "I am adding prod variant" + JSON.stringify(product.variants)
+            );
+            const variant = {
+              variations: _variant,
+              variantPrice: productVariants[j].variantPrice,
+              quantity: productVariants[j].quantity,
+              sku: Math.random().toString(36).substring(2, 11),
+            };
+            console.log("I am adding prod variant1" + JSON.stringify(variant));
+            product.variants.push(variant);
+          }
+          product.save((err, prod) => {
+            if (err) {
+              res.status(400).json({
+                message: err,
+              });
+            }
+            if (prod) {
+              return res.status(201).json({
+                product: prod,
+                message: "Variants saved sucessfully",
+              });
+            }
+          });
+        } else {
+          return res.status(400).json({ error: "Varaiants are required" });
+        }
+      }
+    });
+  } else {
+    return res.status(400).json({ error: "Product ID is required" });
+  }
+};
+
+/***************************************
+ * 
+ * 
+ * 
+  Attribute methods - Start here
+ * 
+ * 
+ * 
+***************************************/
+exports.addAttributes = (req, res) => {
+  if (req.body.attributes) {
+    Attribute.findOne(req.body.attributes).exec(
+      (error, productVariantOption) => {
+        if (error)
+          return res.status(400).json({
+            message: "Product Attribute is not registered",
+          });
+        if (productVariantOption) {
+          return res.status(401).json({
+            message: "Product Attribute is already registered",
+          });
+        } else {
+          const _option = new Attribute(req.body.attributes);
+          _option.save((err, data) => {
+            console.log("Data is " + JSON.stringify(data));
+            if (err) {
+              console.log("Error is " + JSON.stringify(err));
+              return res.status(400).json({
+                message: "Something went wrong",
+                err,
+              });
+            }
+            if (data) {
+              return res
+                .status(201)
+                .json({ data, message: "Attribute created successfully" });
+            }
+          });
+        }
+      }
+    );
+  }
+};
+exports.fetchAttributes = (req, res) => {
+  Attribute.find()
+    //.distinct("tags")
+    .exec((err, data) => {
+      if (err) {
+        return res.status(400).json({
+          error: "Attributes are not found" + err,
+        });
+      }
+
+      res.json({
+        size: data.length,
+        data,
+      });
+    });
+};
+exports.fetchProductVariantOptions = (req, res) => {
+  Attribute.find().exec((error, productVariantOption) => {
+    if (error) return res.status(400).json({ error });
+    if (productVariantOption) {
+      res.status(200).json({ message: "ok", data: productVariantOption });
+    }
+  });
+};
+exports.deleteAttributes = (req, res) => {
+  const optionId = req.query.id;
+  if (optionId) {
+    Attribute.deleteOne({ _id: optionId }).exec((error, result) => {
+      if (error) return res.status(400).json({ error });
+      if (result) {
+        res.status(202).json({ result });
+      }
+    });
+  } else {
+    res.status(400).json({ error: "Params required" });
+  }
+};
+
+/***************************************
+ * 
+ * 
+ * 
+  Product Details methods - Start here
+ * 
+ * 
+ * 
+***************************************/
+exports.fetchCartProductDetails = (req, res) => {
+  //let type = req.query.type;
+  let productIds = req.query.id;
+  let ids = req.query.id.split(",");
+  productIds = [];
+  productIds = ids.map((item) => {
+    return item;
+  });
+  Product.find({ _id: { $in: productIds } }).exec((err, product) => {
+    if (err) return res.status(400).send(err);
+    return res.status(200).send(product);
+  });
+};
+exports.fetchProductDetailsById = (req, res) => {
+  const { productId } = req.params;
+  //console.log("product ID is " + productId);
+  if (productId) {
+    Product.findOne({ _id: productId }).exec((error, product) => {
+      if (error) return res.status(400).json({ error });
+      if (product) {
+        res.status(200).json({ product });
+      }
+    });
+  } else {
+    return res.status(400).json({ error: "Params required" });
+  }
+};
+exports.fetchProductDetails1 = async (req, res) => {
+  const id = req.query.id ? { _id: req.query.id } : {};
+  try {
+    const product = await Product.findOne(
+      { ...id },
+      {
+        flashSale: 0,
+        onSale: 0,
+        updatedAt: 0,
+        createdAt: 0,
+        __v: 0,
+        createdBy: 0,
+      }
+    )
+      // .populate("options")
+      // .populate("variants.variations")
+      // .populate("seller")
+      //.populate({ path: "variants", select: ["name"] })
+      .populate({ path: "category", select: ["name"] });
+    /*  .populate({
+      path: "seller",
+      select: ["username"],
+      populate: { path: "user", select: ["_id"] },
+    }) */
+
+    if (product) {
+      //Limit the product views to show.
+      let limmitedReviews = product.reviews.reverse().slice(0, 5);
+      product.reviews = limmitedReviews;
+      //product Questions
+      const questions = await Questions.find({ product: product._id });
+
+      return res.status(200).json({ product: product, questions: questions });
+    } else {
+      return res.status(400).json({ message: "not able to find the product" });
+    }
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+exports.fetchProductDetails = (req, res) => {
+  const id = req.query.id ? { _id: req.query.id } : {};
+
+  Product.findOne(
+    { ...id },
+    {
+      flashSale: 0,
+      onSale: 0,
+      updatedAt: 0,
+      createdAt: 0,
+      __v: 0,
+      createdBy: 0,
+    }
+  )
+    // .populate("options")
+    // .populate("variants.variations")
+    // .populate("seller")
+    //.populate({ path: "variants", select: ["name"] })
+    .populate({ path: "category", select: ["name"] })
+    /*  .populate({
+      path: "seller",
+      select: ["username"],
+      populate: { path: "user", select: ["_id"] },
+    }) */
+    .exec((error, product) => {
+      if (error)
+        return res.status(400).json({
+          error,
+        });
+      if (product) {
+        //Limit the product views to show.
+        let limmitedReviews = product.reviews.reverse().slice(0, 5);
+        product.reviews = limmitedReviews;
+        const productViews = ProductViewHistory.create({
+          product: product._id,
+          viewed_by: req.user._id,
+          category: product.category,
+          view_date: new Date(),
+        });
+        Product.findOneAndUpdate(
+          { _id: product._id },
+          { $inc: { views: 1 } },
+          { new: true }
+        ).exec();
+        return res.status(200).json({ product });
+      } else {
+        return res
+          .status(400)
+          .json({ message: "not able to find the product" });
+      }
+    });
+};
+
+/***************************************
+ * 
+ * 
+ * 
+  Product Search methods - Start here
+ * 
+ * 
+ * 
+***************************************/
 exports.fetchProducts = (req, res) => {
   const category = req.query.searchKeyword
     ? { "category.name": req.query.searchKeyword }
@@ -138,19 +959,44 @@ exports.fetchProducts = (req, res) => {
       }
     });
 };
-exports.fetchTags = (req, res) => {
-  Product.distinct("tags").exec((err, data) => {
-    if (err) {
-      return res.status(400).json({
-        error: "Tags are not found" + err,
-      });
-    }
+exports.fetchProductsBySlug = (req, res) => {
+  const { slug } = req.params;
+  Category.findOne({ slug: slug })
+    .select("_id")
+    .exec((error, category) => {
+      if (error) {
+        return res.status(400).json({ error });
+      }
 
-    res.json({
-      size: data.length,
-      data,
+      if (category) {
+        Product.find({ category: category._id }).exec((error, products) => {
+          if (error) {
+            return res.status(400).json({ error });
+          }
+
+          if (products.length > 0) {
+            res.status(200).json({
+              products,
+              productsByPrice: {
+                under5k: products.filter((product) => product.price <= 5000),
+                under10k: products.filter(
+                  (product) => product.price > 5000 && product.price <= 10000
+                ),
+                under15k: products.filter(
+                  (product) => product.price > 10000 && product.price <= 15000
+                ),
+                under20k: products.filter(
+                  (product) => product.price > 15000 && product.price <= 20000
+                ),
+                under30k: products.filter(
+                  (product) => product.price > 20000 && product.price <= 30000
+                ),
+              },
+            });
+          }
+        });
+      }
     });
-  });
 };
 exports.getProducts = (req, res) => {
   const category = req.body.category
@@ -416,7 +1262,6 @@ exports.getProducts = (req, res) => {
 
   //console.log(findArgs);
 };
-
 exports.getProductFilters = (req, res) => {
   let findArgs = {};
 
@@ -480,167 +1325,7 @@ exports.getProductFilters = (req, res) => {
     });
   });
 };
-
 exports.getProductFilters1 = (req, res) => {
-  let findArgs = {};
-
-  for (let key in req.body.filters) {
-    if (key === "specifications") {
-      let query1 = [];
-      for (let x in req.body.filters[key]) {
-        if (req.body.filters[key][x].length > 0) {
-          query1.push({
-            $and: [
-              { "specifications.specName": x },
-              { "specifications.specValue": { $in: req.body.filters[key][x] } },
-            ],
-          });
-        }
-      }
-      findArgs["$and"] = query1;
-    } else if (key === "price") {
-      // gte -  greater than price [0-10]
-      // lte - less than
-      if (req.body.filters[key].length > 0) {
-        findArgs[key] = {
-          $gte: req.body.filters[key][0],
-          $lte: req.body.filters[key][1],
-        };
-      }
-    } else {
-      if (req.body.filters[key].length > 0) {
-        findArgs[key] = req.body.filters[key];
-      }
-    }
-    //}
-  }
-
-  //console.log(findArgs);
-
-  Product.aggregate([
-    { $match: findArgs },
-    { $unwind: "$specifications" },
-    {
-      $project: {
-        name: "$specifications.specName",
-        value: { name: "$specifications.specValue" },
-        _id: 0,
-      },
-    },
-    {
-      $group: {
-        _id: "$name",
-        values: { $addToSet: "$value" },
-      },
-    },
-  ]).exec((err, data) => {
-    if (err) {
-      return res.status(400).json({
-        error: err,
-      });
-    }
-    res.json({
-      data,
-    });
-  });
-};
-
-exports.addImagesToProduct = async (req, res) => {
-  const productId = req.query.id;
-  const productObj = {};
-
-  if (req.files && req.files.length > 0) {
-    productObj.productImages = [];
-    for (i in req.files) {
-      const prodFile = parser.format(
-        path.extname(req.files[i].originalname).toString(),
-        req.files[i].buffer
-      );
-      const uploadResult = await uploader.upload(prodFile.content);
-      productObj.productImages.push({ img: uploadResult.secure_url });
-    }
-  }
-
-  if (productId) {
-    Product.findOne({ _id: productId }).exec((error, product) => {
-      if (error) return res.status(400).json({ error });
-      if (product) {
-        Product.findOneAndUpdate(
-          { _id: productId },
-          { productImages: productObj.productImages },
-          { new: true }
-        ).exec((error, updatedProduct) => {
-          if (error) return res.status(400).json({ error });
-          if (updatedProduct) {
-            return res.status(201).json({ product: updatedProduct });
-          }
-        });
-      } else {
-        return res.status(400).json({ error: "Invalid product ID" });
-      }
-    });
-  } else {
-    if (error) return res.status(400).json({ error: "Provide product ID" });
-  }
-};
-
-exports.addSpecificationsToProduct = (req, res) => {
-  const productId = req.query.id;
-  if (productId) {
-    Product.findOne({ _id: productId }).exec((error, product) => {
-      if (error) return res.status(400).json({ error });
-      if (product) {
-        //console.log("Specs are " + JSON.stringify(req.body.specs));
-        const specification = JSON.parse(req.body.specs);
-        if (specification) {
-          product.specifications = [];
-          // const specification = JSON.parse(req.body.specs);
-          // console.log("Specifications are " + JSON.stringify(specification));
-          for (i in specification) {
-            product.specifications.push({
-              specType: specification[i][0],
-              specName: specification[i][1],
-              specValue: specification[i][2],
-              // filterable: specification[i][3],
-            });
-          }
-          //product.specifications.push(_specifications);
-          product.save((err, prod) => {
-            if (err) {
-              res.status(400).json({
-                message: err,
-              });
-            }
-            if (prod) {
-              return res.status(201).json({
-                product: prod,
-                message: "Specs saved sucessfully",
-              });
-            }
-          });
-        } else {
-          return res.status(400).json({ error: "Specs missing" });
-        }
-        /*Product.findOneAndUpdate(
-          { _id: productId },
-          { specifications: productObj.specifications },
-          { new: true }
-        ).exec((error, updatedProduct) => {
-          if (error) return res.status(400).json({ error });
-          if (updatedProduct) {
-            return res.status(201).json({ product: updatedProduct });
-          }
-        });*/
-      } else {
-        return res.status(400).json({ error: "Invalid product ID" });
-      }
-    });
-  } else {
-    if (error) return res.status(400).json({ error: "Provide product ID" });
-  }
-};
-
-exports.getProducts1 = (req, res) => {
   let order = req.query.order ? slugify(req.query.order) : "slug";
   let sortBy = req.query.sortBy ? req.query.sortBy : "_id";
   const sortOrder = req.query.sortOrder
@@ -695,89 +1380,13 @@ exports.getProducts1 = (req, res) => {
       });
   }
 };
-
-exports.fetchProductDetails = (req, res) => {
-  const id = req.query.id ? { _id: req.query.id } : {};
-
-  Product.findOne({ ...id })
-    .populate("options")
-    .populate("variants.variations")
-    // .populate("seller")
-    //.populate({ path: "variants", select: ["name"] })
-    .populate({ path: "category", select: ["name"] })
-    .populate({
-      path: "seller",
-      select: ["username"],
-      populate: { path: "user", select: ["_id"] },
-    })
-    .exec((error, product) => {
-      if (error)
-        return res.status(400).json({
-          error,
-        });
-      if (product) {
-        res.status(200).json({ product });
-      }
-    });
-};
-
-createProducts = (Products, parentId = null) => {
-  const productList = [];
-  let product;
-  if (parentId == null) {
-    product = Products.filter((prod) => prod.parentId == undefined);
-  } else {
-    product = Products.filter((prod) => prod.parentId == parentId);
-  }
-  for (let prod of product) {
-    productList.push({
-      _id: prod._id,
-      name: prod._name,
-      slug: prod.slug,
-      children: createProducts(products, prod._id),
-    });
-  }
-  return productList;
-};
-
-createCategories = (category, parentId = null) => {
-  const categoryList = [];
-  let category1;
-  if (parentId == null) {
-    category1 = category.filter((cat) => cat.parentId == undefined);
-  } else {
-    category1 = category.filter((cat) => cat.parentId == parentId);
-  }
-  for (let cat of category1) {
-    categoryList.push(createCategories(category, cat._id));
-  }
-  return categoryList;
-};
-
-/*
-exports.getProductFilters = (req, res) => {
-  let order = req.query.order ? slugify(req.query.order) : "slug";x`
-  let sortBy = req.query.sortBy ? req.query.sortBy : "_id";
-  const sortOrder = req.query.sortOrder
-    ? req.query.sortOrder === "lowestprice"
-      ? { price: 1 }
-      : req.query.sortOrder === "highestprice"
-      ? { price: -1 }
-      : req.query.sortOrder === "nameascending"
-      ? { slug: 1 }
-      : { slug: -1 }
-    : { _id: -1 };
-  let limit = req.body.limit ? parseInt(req.body.limit) : 5;
-  let skip = parseInt(req.body.skip);
-
-  let findArgs1 = {};
-  let findArgs2 = {};
+exports.getProductFilters2 = (req, res) => {
+  let findArgs = {};
 
   for (let key in req.body.filters) {
     if (key === "specifications") {
       let query1 = [];
       for (let x in req.body.filters[key]) {
-        console.log("Filters are " + JSON.stringify(req.body.filters));
         if (req.body.filters[key][x].length > 0) {
           query1.push({
             $and: [
@@ -787,466 +1396,54 @@ exports.getProductFilters = (req, res) => {
           });
         }
       }
-      findArgs1["$and"] = query1;
-      findArgs2["$and"] = query1;
-      console.log("x1 is " + JSON.stringify(findArgs1));
+      findArgs["$and"] = query1;
     } else if (key === "price") {
       // gte -  greater than price [0-10]
       // lte - less than
       if (req.body.filters[key].length > 0) {
-        findArgs1[key] = {
+        findArgs[key] = {
           $gte: req.body.filters[key][0],
           $lte: req.body.filters[key][1],
-        };
-        findArgs2[key] = {
-          $gte: req.body.filters[key][0],
-          $lte: req.body.filters[key][1],
-        };
-      }
-    } else if (key === "category") {
-      // gte -  greater than price [0-10]
-      // lte - less than
-      if (req.body.filters[key]) {
-        findArgs1[key] = {
-          $in: req.body.filters[key],
         };
       }
     } else {
       if (req.body.filters[key].length > 0) {
-        findArgs1[key] = req.body.filters[key];
-        findArgs2[key] = req.body.filters[key];
+        findArgs[key] = req.body.filters[key];
       }
     }
+    //}
   }
 
-  console.log("Find Args " + JSON.stringify(findArgs1));
-  Product.find(findArgs1)
-    .populate("category")
-    .sort(sortOrder)
-    .skip(skip)
-    .limit(limit)
-    .exec((err, products) => {
-      if (err) {
-        return res.status(400).json({
-          error: "Products not found",
-        });
-      }
-      if (products) {
-        Product.aggregate([
-          { $match: findArgs2 },
-          // { $match: findArgs3 },
-          { $unwind: "$specifications" },
-          {
-            $project: {
-              name: "$specifications.specName",
-              value: { name: "$specifications.specValue" },
-              type: "$specifications.specType",
-              _id: 0,
-            },
-          },
-          {
-            $group: {
-              _id: "$name",
-              values: { $addToSet: "$value" },
-            },
-          },
-        ]).exec((err, filters) => {
-          if (err) {
-            return res.status(400).json({
-              error: err,
-            });
-          }
-          if (filters) {
-            res.json({
-              size: products.length,
-              products,
-              filters,
-            });
-          }
-        });
-      } else {
-        return res.status(400).json({
-          error: "Products not found",
-        });
-      }
-    });
-};
-*/
+  //console.log(findArgs);
 
-/*const productId = req.body.productId;
-  if (productId) {
-    Product.findOne({ _id: productId }).exec((error, product) => {
-      if (error) return res.status(400).json({ error });
-      if (product) {
-        const review = {
-          name: req.user.firstName,
-          rating: Number(req.body.rating),
-          comment: req.body.comment,
-        };
-        console.log("Review is " + review);
-        product.reviews.push(review);
-        product.numReviews = product.reviews.length;
-        product.rating =
-          product.reviews.reduce((a, c) => c.rating + a, 0) /
-          product.reviews.length;
-        product.save((err, prod) => {
-          if (err) {
-            res.status(400).json({
-              message: "Something went wrong",
-            });
-          }
-          if (prod) {
-            return res.status(201).json({ product: prod });
-          }
-        });
-      }
-    });
-  } else {
-    return res.status(400).json({ error: "Product ID is required" });
-  }*/
-
-exports.fetchCartProductDetails = (req, res) => {
-  //let type = req.query.type;
-  let productIds = req.query.id;
-  let ids = req.query.id.split(",");
-  productIds = [];
-  productIds = ids.map((item) => {
-    return item;
-  });
-  Product.find({ _id: { $in: productIds } }).exec((err, product) => {
-    if (err) return res.status(400).send(err);
-    return res.status(200).send(product);
-  });
-};
-
-exports.fetchProductsBySlug = (req, res) => {
-  const { slug } = req.params;
-  Category.findOne({ slug: slug })
-    .select("_id")
-    .exec((error, category) => {
-      if (error) {
-        return res.status(400).json({ error });
-      }
-
-      if (category) {
-        Product.find({ category: category._id }).exec((error, products) => {
-          if (error) {
-            return res.status(400).json({ error });
-          }
-
-          if (products.length > 0) {
-            res.status(200).json({
-              products,
-              productsByPrice: {
-                under5k: products.filter((product) => product.price <= 5000),
-                under10k: products.filter(
-                  (product) => product.price > 5000 && product.price <= 10000
-                ),
-                under15k: products.filter(
-                  (product) => product.price > 10000 && product.price <= 15000
-                ),
-                under20k: products.filter(
-                  (product) => product.price > 15000 && product.price <= 20000
-                ),
-                under30k: products.filter(
-                  (product) => product.price > 20000 && product.price <= 30000
-                ),
-              },
-            });
-          }
-        });
-      }
-    });
-};
-
-exports.fetchProductDetailsById = (req, res) => {
-  const { productId } = req.params;
-  //console.log("product ID is " + productId);
-  if (productId) {
-    Product.findOne({ _id: productId }).exec((error, product) => {
-      if (error) return res.status(400).json({ error });
-      if (product) {
-        res.status(200).json({ product });
-      }
-    });
-  } else {
-    return res.status(400).json({ error: "Params required" });
-  }
-};
-
-exports.deleteProductById = (req, res) => {
-  const { productId } = req.body.payload;
-  if (productId) {
-    Product.deleteOne({ _id: productId }).exec((error, result) => {
-      if (error) return res.status(400).json({ error });
-      if (result) {
-        res.status(202).json({ result });
-      }
-    });
-  } else {
-    res.status(400).json({ error: "Params required" });
-  }
-};
-
-exports.addProductReview = (req, res) => {
-  //console.log("product ID is " + req.user._id);
-  const productId = req.query.id;
-  if (productId) {
-    Product.findOne({ _id: productId }).exec((error, product) => {
-      if (error) return res.status(400).json({ error });
-      if (product) {
-        let today = new Date();
-        var dd = String(today.getDate()).padStart(2, "0");
-        var mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
-        var yyyy = today.getFullYear();
-
-        today = mm + "/" + dd + "/" + yyyy;
-        //console.log("Today is " + today);
-        const review = {
-          name: req.body.name,
-          rating: Number(req.body.rating),
-          comment: req.body.comment,
-          review_date: today,
-        };
-        //console.log("Review is " + JSON.stringify(review));
-        product.reviews.push(review);
-        product.numReviews = product.reviews.length;
-
-        product.rating =
-          product.reviews.reduce((a, c) => c.rating + a, 0) /
-          product.reviews.length;
-        product.save((err, prod) => {
-          if (err) {
-            res.status(400).json({
-              message: err,
-            });
-          }
-          if (prod) {
-            return res.status(201).json({
-              product: prod.reviews[prod.reviews.length - 1],
-              message: "Review saved sucessfully",
-            });
-          }
-        });
-      }
-    });
-  } else {
-    return res.status(400).json({ error: "Product ID is required" });
-  }
-};
-
-exports.updateProductReviews = (req, res) => {
-  const productId = req.query.id;
-  const skip = req.query.page ? (req.query.page - 1) * 5 : 0;
-  const limit = req.query.limit ? parseInt(req.query.limit) : 5;
-  if (productId) {
-    Product.findOne({ _id: productId }).exec((error, product) => {
-      if (error)
-        return res.status(400).json({
-          error,
-        });
-      if (product) {
-        let myArray = product.reviews;
-        //console.log("Reviews are ******************" + JSON.stringify(myArray));
-        //myArray.slice(skip, limit);
-        //console.log(
-        // "*********************Reviews are " + JSON.stringify(myArray)
-        //);
-        //product.reviews.slice(2, 3);
-        res.status(200).json({ reviews: myArray.slice(skip, limit + skip) });
-      }
-    });
-  }
-};
-
-exports.addProductVariant = (req, res) => {
-  //console.log("product ID is " + req.user._id);
-  const productId = req.query.productId;
-  if (productId) {
-    Product.findOne({ _id: productId }).exec((error, product) => {
-      if (error) return res.status(400).json({ error });
-      if (product) {
-        //console.log("I am adding prod variant" + JSON.parse(req.body));
-        if (req.body.variants) {
-          let _variant = [];
-          // const variantBody = JSON.parse(req.body.variants);
-          console.log(
-            "I am adding prod variant" + JSON.stringify(req.body.variants)
-          );
-          const variantBody = req.body.variants;
-          for (i in variantBody) {
-            _variant.push(variantBody[i]);
-          }
-
-          const variant = {
-            variations: _variant,
-            varaiantPrice: req.body.varaiantPrice,
-            quantity: req.body.quantity,
-            sku: Math.random().toString(36).substring(2, 11),
-          };
-          product.variants.push(variant);
-          product.save((err, prod) => {
-            if (err) {
-              res.status(400).json({
-                message: err,
-              });
-            }
-            if (prod) {
-              return res.status(201).json({
-                product: prod,
-                message: "Variants saved sucessfully",
-              });
-            }
-          });
-        } else {
-          return res.status(400).json({ error: "Varaiants are required" });
-        }
-      }
-    });
-  } else {
-    return res.status(400).json({ error: "Product ID is required" });
-  }
-};
-
-exports.addProductTags = (req, res) => {
-  const productId = req.query.productId;
-  if (productId) {
-    Product.findOne({ _id: productId }).exec((error, product) => {
-      if (error) return res.status(400).json({ error });
-      if (product) {
-        if (req.body.tags && req.body.tags.length > 0) {
-          const _tags = req.body.tags;
-          //product.tags = [];
-          for (i in _tags) {
-            const tagIndex = product.tags.findIndex((x) => x == _tags[i]);
-            if (tagIndex < 0) product.tags.push(_tags[i]);
-          }
-          product.save((err, prod) => {
-            if (err) {
-              res.status(400).json({
-                message: err,
-              });
-            }
-            if (prod) {
-              return res.status(201).json({
-                product: prod,
-                message: "tags saved sucessfully",
-              });
-            }
-          });
-        } else {
-          return res.status(400).json({ error: "Tags are required" });
-        }
-      }
-    });
-  } else {
-    return res.status(400).json({ error: "Product ID is required" });
-  }
-};
-
-exports.addOptions = (req, res) => {
-  if (req.body.options) {
-    ProductVariantOption.findOne(req.body.options).exec(
-      (error, productVariantOption) => {
-        if (error)
-          return res.status(400).json({
-            message: "Product Option is not registered",
-          });
-        if (productVariantOption) {
-          return res.status(401).json({
-            message: "Product Options is already registered",
-          });
-        } else {
-          const _option = new ProductVariantOption(req.body.options);
-          _option.save((err, data) => {
-            console.log("Data is " + JSON.stringify(data));
-            if (err) {
-              console.log("Error is " + JSON.stringify(err));
-              return res.status(400).json({
-                message: "Something went wrong",
-                err,
-              });
-            }
-            if (data) {
-              return res
-                .status(201)
-                .json({ data, message: "Product Option created successfully" });
-            }
-          });
-        }
-      }
-    );
-  }
-};
-exports.fetchOptions = (req, res) => {
-  ProductVariantOption.find()
-    //.distinct("tags")
-    .exec((err, data) => {
-      if (err) {
-        return res.status(400).json({
-          error: "Options are not found" + err,
-        });
-      }
-
-      res.json({
-        size: data.length,
-        data,
+  Product.aggregate([
+    { $match: findArgs },
+    { $unwind: "$specifications" },
+    {
+      $project: {
+        name: "$specifications.specName",
+        value: { name: "$specifications.specValue" },
+        _id: 0,
+      },
+    },
+    {
+      $group: {
+        _id: "$name",
+        values: { $addToSet: "$value" },
+      },
+    },
+  ]).exec((err, data) => {
+    if (err) {
+      return res.status(400).json({
+        error: err,
       });
-    });
-};
-
-exports.fetchProductVariantOptions = (req, res) => {
-  ProductVariantOption.find().exec((error, productVariantOption) => {
-    if (error) return res.status(400).json({ error });
-    if (productVariantOption) {
-      res.status(200).json({ message: "ok", productVariantOption });
     }
+    res.json({
+      data,
+    });
   });
 };
-
-exports.addProductOptions = (req, res) => {
-  const productId = req.query.id;
-  if (productId) {
-    Product.findOne({ _id: productId }).exec((error, product) => {
-      if (error) return res.status(400).json({ error });
-      if (product) {
-        //console.log("Specs are " + JSON.stringify(req.body.specs));
-        const option =
-          //JSON.parse(
-          req.body.options;
-        //);
-        if (option) {
-          product.options = [];
-          for (i in option) {
-            product.options.push(option[i]);
-          }
-          //product.specifications.push(_specifications);
-          product.save((err, prod) => {
-            if (err) {
-              res.status(400).json({
-                message: err,
-              });
-            }
-            if (prod) {
-              return res.status(201).json({
-                product: prod,
-                message: "Options saved sucessfully",
-              });
-            }
-          });
-        } else {
-          return res.status(400).json({ error: "Options missing" });
-        }
-      } else {
-        return res.status(400).json({ error: "Invalid product ID" });
-      }
-    });
-  } else {
-    if (error) return res.status(400).json({ error: "Provide product ID" });
-  }
-};
-
-exports.getProductFilters2 = (req, res) => {
+exports.getProducts1 = (req, res) => {
   let findArgs = {};
   const category = req.body.category
     ? {
@@ -1464,3 +1661,389 @@ exports.getProductFilters2 = (req, res) => {
       });
     });
 };
+exports.getProducts2 = (req, res) => {
+  let findArgs = {};
+  const category = req.body.category
+    ? { "cat.name": { $in: req.body.category } }
+    : {};
+  const searchKeyword1 = req.query.tag ? { tags: req.query.tag } : {};
+  const sortOrder = req.query.sort
+    ? req.query.sort === "lowestprice"
+      ? { price: 1 }
+      : req.query.sort === "highestprice"
+      ? { price: -1 }
+      : req.query.sort === "nameascending"
+      ? { slug: 1 }
+      : { slug: -1 }
+    : { _id: -1 };
+
+  let limit = req.query.limit ? parseInt(req.query.limit) : 250;
+  let skip = req.query.skip ? parseInt(req.query.skip) : 0;
+
+  for (let key in req.body.filters) {
+    if (key === "specifications") {
+      let query1 = [];
+      for (let x in req.body.filters[key]) {
+        if (req.body.filters[key][x].length > 0) {
+          query1.push({
+            $and: [
+              { "specifications.specName": x },
+              { "specifications.specValue": { $in: req.body.filters[key][x] } },
+            ],
+          });
+        }
+      }
+      findArgs["$and"] = query1;
+    } else if (key === "brand") {
+      if (req.body.filters[key].length > 0) {
+        findArgs[key] = { $in: req.body.filters[key] };
+      }
+    } else if (key === "options") {
+      let query2 = [];
+      for (let x in req.body.filters[key]) {
+        if (req.body.filters[key][x].length > 0) {
+          query2.push({
+            $and: [
+              { "options.varationName": x },
+              {
+                "options.varationValue": {
+                  $in: req.body.filters[key][x],
+                },
+              },
+            ],
+          });
+        }
+        console.log(x + "Query2 is" + JSON.stringify(req.body.filters[key][x]));
+      }
+      findArgs["$and"] = query2;
+    } else if (key === "price") {
+      if (req.body.filters[key].length > 0) {
+        findArgs[key] = {
+          $gte: req.body.filters[key][0],
+          $lte: req.body.filters[key][1],
+        };
+      }
+    } else if (key === "category") {
+      findArgs[key] = {
+        "cat.name": { $in: [req.body.filters[key]] },
+      };
+    } else {
+      if (req.body.filters[key].length > 0) {
+        findArgs[key] = { $in: req.body.filters[key] };
+      }
+    }
+  }
+  //findArgs = { category: { "cat.name": "MacBook" } };
+  var findArgs1 = [{ ...searchKeyword1 }, findArgs];
+  if (req.body.category && req.body.category.length > 0) {
+    findArgs1.push(category);
+  }
+  const catLookUpObject = {
+    $lookup: {
+      from: Category.collection.name,
+      localField: "category",
+      foreignField: "_id",
+      as: "cat",
+    },
+  };
+  console.log("Args are " + JSON.stringify(findArgs1));
+  Product.aggregate([
+    {
+      $facet: {
+        categorizedByCategories: [
+          catLookUpObject,
+          {
+            $lookup: {
+              from: "ProductVariantOption",
+              localField: "options",
+              foreignField: "_id",
+              as: "options",
+            },
+          },
+          {
+            $match: {
+              $and: findArgs1,
+            },
+          },
+          {
+            $group: {
+              _id: "$cat.name",
+              count: { $sum: 1 },
+            },
+          },
+
+          { $sort: { count: -1, _id: -1 } },
+        ],
+        categorizedByBrand: [
+          catLookUpObject,
+          {
+            $lookup: {
+              from: "ProductVariantOption",
+              localField: "options",
+              foreignField: "_id",
+              as: "options",
+            },
+          },
+          {
+            $match: {
+              $and: findArgs1,
+            },
+          },
+          {
+            $group: {
+              _id: "$brand",
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { count: -1, _id: -1 } },
+        ],
+        categorizedByPriceAuto: [
+          catLookUpObject,
+          {
+            $lookup: {
+              from: "ProductVariantOption",
+              localField: "options",
+              foreignField: "_id",
+              as: "options",
+            },
+          },
+          {
+            $match: {
+              $and: findArgs1,
+            },
+          },
+          {
+            $bucketAuto: {
+              groupBy: "$price",
+              buckets: 1,
+            },
+          },
+        ],
+        filteredProducts: [
+          catLookUpObject,
+          {
+            $lookup: {
+              from: "ProductVariantOption",
+              localField: "options",
+              foreignField: "_id",
+              as: "options",
+            },
+          },
+          {
+            $match: {
+              $and: findArgs1,
+            },
+          },
+          {
+            $project: {
+              name: 1,
+              price: 1,
+              rating: 1,
+              productImages: 1,
+              seller: 1,
+              category: 1,
+              tags: 1,
+            },
+          },
+          { $skip: skip },
+          {
+            $limit: limit,
+          },
+
+          { $sort: sortOrder },
+        ],
+      },
+    },
+  ])
+    //({ tags: req.query.tag })
+    //.select("tags")
+    .exec((err, data) => {
+      if (err) {
+        return res.status(400).json({
+          error: "Products not found" + err,
+        });
+      }
+      if (data) {
+        const size = data[0].filteredProducts
+          ? data[0].filteredProducts.length
+          : 0;
+        res.json({
+          size: size,
+          data,
+        });
+      }
+    });
+};
+
+/***************************************
+ * 
+ * 
+ * 
+  Product Delete methods - Start here
+ * 
+ * 
+ * 
+***************************************/
+exports.deleteProductById = (req, res) => {
+  const { productId } = req.body.payload;
+  if (productId) {
+    Product.deleteOne({ _id: productId }).exec((error, result) => {
+      if (error) return res.status(400).json({ error });
+      if (result) {
+        res.status(202).json({ result });
+      }
+    });
+  } else {
+    res.status(400).json({ error: "Params required" });
+  }
+};
+/*
+exports.getProductFilters = (req, res) => {
+  let order = req.query.order ? slugify(req.query.order) : "slug";x`
+  let sortBy = req.query.sortBy ? req.query.sortBy : "_id";
+  const sortOrder = req.query.sortOrder
+    ? req.query.sortOrder === "lowestprice"
+      ? { price: 1 }
+      : req.query.sortOrder === "highestprice"
+      ? { price: -1 }
+      : req.query.sortOrder === "nameascending"
+      ? { slug: 1 }
+      : { slug: -1 }
+    : { _id: -1 };
+  let limit = req.body.limit ? parseInt(req.body.limit) : 5;
+  let skip = parseInt(req.body.skip);
+
+  let findArgs1 = {};
+  let findArgs2 = {};
+
+  for (let key in req.body.filters) {
+    if (key === "specifications") {
+      let query1 = [];
+      for (let x in req.body.filters[key]) {
+        console.log("Filters are " + JSON.stringify(req.body.filters));
+        if (req.body.filters[key][x].length > 0) {
+          query1.push({
+            $and: [
+              { "specifications.specName": x },
+              { "specifications.specValue": { $in: req.body.filters[key][x] } },
+            ],
+          });
+        }
+      }
+      findArgs1["$and"] = query1;
+      findArgs2["$and"] = query1;
+      console.log("x1 is " + JSON.stringify(findArgs1));
+    } else if (key === "price") {
+      // gte -  greater than price [0-10]
+      // lte - less than
+      if (req.body.filters[key].length > 0) {
+        findArgs1[key] = {
+          $gte: req.body.filters[key][0],
+          $lte: req.body.filters[key][1],
+        };
+        findArgs2[key] = {
+          $gte: req.body.filters[key][0],
+          $lte: req.body.filters[key][1],
+        };
+      }
+    } else if (key === "category") {
+      // gte -  greater than price [0-10]
+      // lte - less than
+      if (req.body.filters[key]) {
+        findArgs1[key] = {
+          $in: req.body.filters[key],
+        };
+      }
+    } else {
+      if (req.body.filters[key].length > 0) {
+        findArgs1[key] = req.body.filters[key];
+        findArgs2[key] = req.body.filters[key];
+      }
+    }
+  }
+
+  console.log("Find Args " + JSON.stringify(findArgs1));
+  Product.find(findArgs1)
+    .populate("category")
+    .sort(sortOrder)
+    .skip(skip)
+    .limit(limit)
+    .exec((err, products) => {
+      if (err) {
+        return res.status(400).json({
+          error: "Products not found",
+        });
+      }
+      if (products) {
+        Product.aggregate([
+          { $match: findArgs2 },
+          // { $match: findArgs3 },
+          { $unwind: "$specifications" },
+          {
+            $project: {
+              name: "$specifications.specName",
+              value: { name: "$specifications.specValue" },
+              type: "$specifications.specType",
+              _id: 0,
+            },
+          },
+          {
+            $group: {
+              _id: "$name",
+              values: { $addToSet: "$value" },
+            },
+          },
+        ]).exec((err, filters) => {
+          if (err) {
+            return res.status(400).json({
+              error: err,
+            });
+          }
+          if (filters) {
+            res.json({
+              size: products.length,
+              products,
+              filters,
+            });
+          }
+        });
+      } else {
+        return res.status(400).json({
+          error: "Products not found",
+        });
+      }
+    });
+};
+*/
+
+/*const productId = req.body.productId;
+  if (productId) {
+    Product.findOne({ _id: productId }).exec((error, product) => {
+      if (error) return res.status(400).json({ error });
+      if (product) {
+        const review = {
+          name: req.user.firstName,
+          rating: Number(req.body.rating),
+          comment: req.body.comment,
+        };
+        console.log("Review is " + review);
+        product.reviews.push(review);
+        product.numReviews = product.reviews.length;
+        product.rating =
+          product.reviews.reduce((a, c) => c.rating + a, 0) /
+          product.reviews.length;
+        product.save((err, prod) => {
+          if (err) {
+            res.status(400).json({
+              message: "Something went wrong",
+            });
+          }
+          if (prod) {
+            return res.status(201).json({ product: prod });
+          }
+        });
+      }
+    });
+  } else {
+    return res.status(400).json({ error: "Product ID is required" });
+  }*/

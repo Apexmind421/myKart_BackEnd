@@ -16,6 +16,7 @@ const categoryScehma = new mongoose.Schema(
       type: String,
     },
     categoryImage: { type: String },
+    banner: { type: String },
     parentId: {
       type: String,
     },

@@ -1,12 +1,5 @@
 const mongoose = require("mongoose");
 
-const reviewScehma = new mongoose.Schema({
-  name: { type: String, required: true },
-  rating: { type: Number, default: 0 },
-  comment: { type: String, required: true },
-  review_date: { type: String },
-});
-
 const variantScehma = new mongoose.Schema({
   /* variations: [
     {
@@ -21,11 +14,11 @@ const variantScehma = new mongoose.Schema({
   variations: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "ProductVariantOption",
+      ref: "ProductOption",
       required: true,
     },
   ],
-  varaiantPrice: {
+  variantPrice: {
     type: Number,
     required: true,
   },
@@ -45,7 +38,20 @@ const variantScehma = new mongoose.Schema({
     default: 1,
   },
 });
-
+const reviewScehma = new mongoose.Schema({
+  name: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  rating: { type: Number, default: 0 },
+  comment: {
+    type: String,
+    //required: true
+  },
+  //TO DO:
+  productId: {
+    type: String,
+  },
+  images: [{ type: String }],
+  review_date: { type: Date },
+});
 const productScehma = new mongoose.Schema(
   {
     name: {
@@ -68,6 +74,11 @@ const productScehma = new mongoose.Schema(
       required: true,
       default: 0,
     },
+    quantity: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
     views: {
       //Need to be updated on view of product details
       type: Number,
@@ -78,6 +89,12 @@ const productScehma = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    discount: {
+      type: Number,
+    },
+    shippingCost: {
+      type: Number,
+    },
     description: {
       type: String,
       required: true,
@@ -86,7 +103,7 @@ const productScehma = new mongoose.Schema(
     offer: {
       type: Number,
     },
-    mainImage: {
+    thumbnailImage: {
       type: String,
       //  required: [true, 'A product must have a main image']
     },
@@ -95,16 +112,28 @@ const productScehma = new mongoose.Schema(
         img: { type: String },
       },
     ],
-    variants: [variantScehma],
-    options: [
+    /* variants: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "ProductVariantOption",
+        ref: "ProductVariant",
+      },
+    ],*/
+    //[variantScehma],
+    attributes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Attribute",
       },
     ],
     rating: { type: Number, default: 5, required: true },
     numReviews: { type: Number, default: 0, required: true },
-    reviews: [reviewScehma],
+    reviews: [
+      reviewScehma,
+      /*{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Reviews",
+      },*/
+    ],
     specifications: [
       {
         specName: {
@@ -151,7 +180,8 @@ const productScehma = new mongoose.Schema(
     },
     avialableCities: [
       {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "ZIPCode",
       },
     ],
     tags: [
@@ -159,10 +189,35 @@ const productScehma = new mongoose.Schema(
         type: String,
       },
     ],
+    flashSale: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "FlashSale",
+    },
+    onSale: {
+      type: Boolean,
+      default: false,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    discount_type: {
+      type: String,
+      enum: ["Buy", "View", "Register"],
+    },
+    need_to_buy: {
+      type: Number,
+      default: 0,
+    },
+    need_to_View: {
+      type: Number,
+      default: 0,
+    },
+    need_to_Register: {
+      type: Number,
+      default: 0,
+    },
+    tax: { type: Number },
     updatedAt: Date,
   },
   { timestamps: true }

@@ -11,6 +11,10 @@ const { requireLogin, middleware } = require("../Validators/validation");
 const shortid = require("shortid");
 const path = require("path");
 const multer = require("multer");
+const {
+  flashSaleImgResize,
+  uploadImage,
+} = require("../middlewares/uploadImage");
 const ALLOWED_FORMATS = [
   "image/jpeg",
   "image/png",
@@ -41,26 +45,27 @@ const upload = multer({
   },
 });
 
+/*******************
+Routes
+********************/
+
 router.post(
   "/category/add",
   requireLogin,
-  //middleware,
-  upload.array("categoryImage"),
+  uploadImage.array("categoryImage"),
+  //uploadImage.array("banner"),
+  //upload.array("categoryImage"),
   addCategory
 );
-
 router.get("/category/fetch", fetchCategory);
-
 router.get("/category/fetchcategories", fetchCategories);
-
 router.post(
   "/category/modify",
   requireLogin,
   middleware,
-  upload.array("categoryImage"),
+  uploadImage.array("categoryImage"),
   modifyCategories
 );
-
 router.post("/category/delete", requireLogin, middleware, deleteCategories);
 
 module.exports = router;

@@ -13,47 +13,35 @@ const addressSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
-  pinCode: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  locality: {
-    type: String,
-    required: true,
-    trim: true,
-    min: 10,
-    max: 100,
-  },
-  address: {
-    type: String,
-    required: true,
-    trim: true,
-    min: 10,
-    max: 100,
-  },
-  cityDistrictTown: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  state: {
-    type: String,
-    required: true,
-    required: true,
-  },
-  landmark: {
-    type: String,
-    min: 10,
-    max: 100,
-  },
   alternatePhone: {
     type: String,
   },
-  addressType: {
+  addressLine1: {
     type: String,
     required: true,
+    trim: true,
+    min: 10,
+    max: 100,
+  },
+  addressType: {
+    type: String,
     enum: ["home", "work"],
+    default: "home",
+  },
+  addressLine2: {
+    type: String,
+    trim: true,
+    min: 10,
+    max: 100,
+  },
+  area: {
+    type: String,
+    min: 10,
+    max: 100,
+  },
+  zipCode: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "ZIPCode",
     required: true,
   },
 });
@@ -66,6 +54,7 @@ const userAddressSchema = new mongoose.Schema(
       ref: "User",
     },
     address: [addressSchema],
+    defaultAddress: { type: String, default: null },
   },
   { timestamps: true }
 );

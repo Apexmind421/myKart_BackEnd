@@ -18,20 +18,33 @@ const orderSchema = new mongoose.Schema(
     },
     items: [
       {
-        productId: {
+        product: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Product",
-        },
-        payablePrice: {
-          type: Number,
           required: true,
         },
-        purchasedQty: {
-          type: Number,
-          required: true,
+        variant: { type: mongoose.Schema.Types.ObjectId, ref: "Variant" },
+        quantity: { type: Number, default: 1 },
+        price: { type: Number },
+        shippingCost: { type: Number },
+        tax: { type: Number },
+        discount: { type: Number },
+        team: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Teams",
         },
       },
     ],
+    taxPrice: {
+      type: Number,
+      required: true,
+      default: 0.0,
+    },
+    shippingPrice: {
+      type: Number,
+      required: true,
+      default: 0.0,
+    },
     isPaid: {
       type: Boolean,
       required: true,
@@ -47,21 +60,15 @@ const orderSchema = new mongoose.Schema(
     },
     paymentType: {
       type: String,
-      enum: ["cod", "card"],
+      enum: ["cod", "card", "upi"],
       required: true,
     },
     paymentId: {
       type: String,
     },
-    taxPrice: {
-      type: Number,
-      required: true,
-      default: 0.0,
-    },
-    shippingPrice: {
-      type: Number,
-      required: true,
-      default: 0.0,
+    is_shipping_price_returnable: {
+      type: Boolean,
+      default: false,
     },
     orderStatus: [
       {
@@ -72,13 +79,27 @@ const orderSchema = new mongoose.Schema(
         },
         date: {
           type: Date,
+          default: new Date(),
         },
-        isCompleted: {
+        /*    isCompleted: {
           type: Boolean,
           default: false,
-        },
+        }, */
       },
     ],
+    couponApplied: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Coupon",
+    },
+    tracking_code: {
+      type: String,
+    },
+    notes: {
+      type: String,
+    },
+    delivery_date: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );

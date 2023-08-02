@@ -11,16 +11,24 @@ const variantScehma = new mongoose.Schema(
         },
       },
     ],*/
-    vartionOption: [
+    variations: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "ProductOption",
+        ref: "Attribute",
         required: true,
       },
     ],
-    varaiantPrice: {
+    price: {
       type: Number,
       required: true,
+    },
+    discount: {
+      type: Number,
+      default: 0,
+    },
+    shippingCost: {
+      type: Number,
+      default: 0,
     },
     product: {
       type: mongoose.Schema.Types.ObjectId,
@@ -31,11 +39,29 @@ const variantScehma = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      unique: true,
     },
     quantity: {
       type: Number,
       required: true,
       default: 1,
+    },
+    productImages: [
+      {
+        img: { type: String },
+      },
+    ],
+    lengthInCM: {
+      type: Number,
+    },
+    widthInCM: {
+      type: Number,
+    },
+    heightInCM: {
+      type: Number,
+    },
+    WeightInGrams: {
+      type: Number,
     },
   },
   { timestamps: true }

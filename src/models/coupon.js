@@ -4,51 +4,53 @@ const Schema = mongoose.Schema;
 // creating objectSchema
 
 const couponCodeSchema = new Schema({
-  couponCodeName: {
+  code: {
     type: String,
     min: 5,
     max: 15,
     trim: true,
+    unique: true,
     required: true,
+    index: true,
   },
   products: [
     {
-      productID: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Product",
-      },
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
     },
   ],
+  min_buy: {
+    type: Number,
+  },
+  max_discount: {
+    type: Number,
+  },
+  type: {
+    type: String,
+    enum: ["product", "cart"],
+    default: "product",
+  },
   discount: {
     type: Number,
     required: true,
   },
   isPercent: { type: Boolean, require: true, default: true },
-  discountStatus: {
+  isActive: {
     type: Boolean,
     required: true,
     default: true,
   },
-
-  /*  originalPrice: {
-        type: Number,
-    },
-    finalPrice: {
-        type: Number,
-    },
-  createdAt: {
+  details: {
     type: String,
-    // default: moment().format("DD/MM/YYYY") + ";" + moment().format("hh:mm:ss"),
-  },*/
-  updatedAt: Date,
-  expirationTime: {
-    type: String,
+  },
+  start_date: {
+    type: Date,
+    required: true,
+  },
+  end_date: {
+    type: Date,
     required: true,
   },
 });
 
-const CouponCodeDiscount = mongoose.model(
-  "couponcode-discount-product",
-  couponCodeSchema
-);
-module.exports = CouponCodeDiscount;
+module.exports = mongoose.model("Coupon", couponCodeSchema);

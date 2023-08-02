@@ -10,6 +10,7 @@ const authRoutes = require("./routes/auth");
 const adminAuthRoutes = require("./routes/admin/auth");
 const catRoutes = require("./routes/category");
 const prodRoutes = require("./routes/product");
+const historyRoutes = require("./routes/productViews");
 const cartRoutes = require("./routes/cart");
 const favoriteRoutes = require("./routes/favorite");
 const pageRoutes = require("./routes/admin/page");
@@ -17,6 +18,8 @@ const addressRoutes = require("./routes/address");
 const initialDataRoutes = require("./routes/admin/initialData");
 const orderRoutes = require("./routes/order");
 const questionRoutes = require("./routes/questions");
+const supportRoutes = require("./routes/tickets");
+const flashSaleRoutes = require("./routes/flashSale");
 const couponRoutes = require("./routes/coupon");
 const attributeRoutes = require("./routes/attribute");
 const { cloudinaryConfig } = require("./config/cloudinary.config");
@@ -56,8 +59,11 @@ app.use("/api", addressRoutes);
 app.use("/api", initialDataRoutes);
 app.use("/api", orderRoutes);
 app.use("/api", questionRoutes); //Added Questions Route
+app.use("/api", flashSaleRoutes);
 app.use("/api", favoriteRoutes);
 app.use("/api", couponRoutes);
+app.use("/api", historyRoutes);
+app.use("/api", supportRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -4,6 +4,10 @@ const DatauriParser = require("datauri/parser");
 const path = require("path");
 const parser = new DatauriParser();
 const { uploader } = require("../config/cloudinary.config");
+
+const { cloudinaryUploadImg } = require("../utils/cloudinary");
+const fs = require("fs");
+
 function createCategories(categories, parentId = null) {
   const categoryList = [];
   let category;
@@ -32,11 +36,12 @@ exports.addCategory = async (req, res) => {
     name: req.body.name,
     slug: slugify(req.body.name),
   };
+  console.log("Files 001 " + JSON.stringify(req.file));
   /*
     if(req.file){
         categoryObj.categoryImage = process.env.API + '/public/' + req.file.filename;
     }
-*/
+
   if (req.files) {
     const catFile = parser.format(
       path.extname(req.files[0].originalname).toString(),
@@ -45,6 +50,23 @@ exports.addCategory = async (req, res) => {
     const uploadResult = await uploader.upload(catFile.content);
     categoryObj.categoryImage = uploadResult.secure_url;
     // console.log("I am inside the create Category " + uploadResult.secure_url);
+  }
+*/
+
+  const imageUpload = (path) => cloudinaryUploadImg(path, "images");
+  const files = req.files;
+  for (i in files) {
+    const { path } = files[i];
+    const newpath = await imageUpload(path);
+
+    if (i == 0) {
+      categoryObj.categoryImage = newpath.url;
+    }
+    if (i == 1) {
+      categoryObj.banner = newpath.url;
+    }
+
+    //fs.unlinkSync(path);
   }
 
   if (req.body.parentId) {
@@ -154,7 +176,7 @@ exports.modifyCategories = async (req, res) => {
       console.log("Category is 1 " + parentId); //TODO: Not working
       categoryObj.parentId = parentId;
     }
-
+    /*
     if (req.files && req.files.length > 0) {
       const catFile = parser.format(
         path.extname(req.files[0].originalname).toString(),
@@ -163,6 +185,22 @@ exports.modifyCategories = async (req, res) => {
       const uploadResult = await uploader.upload(catFile.content);
       categoryObj.categoryImage = uploadResult.secure_url;
       console.log("I am inside the create Category " + uploadResult.secure_url);
+    } */
+
+    const imageUpload = (path) => cloudinaryUploadImg(path, "images");
+    const files = req.files;
+    for (i in files) {
+      const { path } = files[i];
+      const newpath = await imageUpload(path);
+
+      if (i == 0) {
+        categoryObj.categoryImage = newpath.url;
+      }
+      if (i == 1) {
+        categoryObj.banner = newpath.url;
+      }
+
+      //fs.unlinkSync(path);
     } // TODO: Delete old image from cloudinary
 
     const updatedCategory = await Category.findOneAndUpdate(

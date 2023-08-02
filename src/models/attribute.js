@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const attributeScehma = new mongoose.Schema(
   {
-    attribute: {
+    name: {
       type: String,
       required: true,
       lowercase: true,

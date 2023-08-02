@@ -9,6 +9,7 @@ const {
   refreshToken,
   user_photoUpload,
 } = require("../controller/auth");
+const { getUserReviews } = require("../controller/reviews");
 const {
   validateRegisterRequest,
   validateLoginRequest,
@@ -35,6 +36,7 @@ const upload = multer({
     }
   },
 });
+router.get("/user/reviews", requireLogin, getUserReviews);
 router.post("/login", validateLoginRequest, isRequestValidated, login);
 router.post("/register", validateRegisterRequest, isRequestValidated, register);
 router.post("/refresh-token", refreshToken);
