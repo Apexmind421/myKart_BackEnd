@@ -1,17 +1,25 @@
 const Cart = require("../models/cart");
 const Product = require("../models/product");
-const validateMongoDbId = require("../Validators/validateMongodbId");
+const ProductVariant = require("../models/productVariant");
+//const validateMongoDbId = require("../Validators/validateMongodbId");
 const Coupon = require("../models/coupon");
 
 exports.userCart = async (req, res) => {
+  /* 
+  1. Check if the cart is exist, if exist delete the old one.
+  2. Set cart items. ie. to fetch the product details like quanity and price
+  3. Validate if the quanity exists
+  4. Check if reference ID exisits, if yes, update the cart
+  5. Check if team buy. if yes, save team ID(if exist), needToView, needToBuy, discountedPrice*/
   //if team buy is true, take originalprice and discountprice,
   //or else take only originalprice
   const { cart } = req.body;
   const { _id } = req.user;
-  //validateMongoDbId(_id);
+
   try {
     let cartItems = [];
-    // check if user already have product in cart
+
+    // check if user already have product in cart, if yes, then delete cart
     const alreadyExistCart = await Cart.findOne({ user: _id });
     if (alreadyExistCart) {
       alreadyExistCart.remove();
@@ -22,29 +30,90 @@ exports.userCart = async (req, res) => {
       let object = {};
       object.product = cart[i].product;
       object.quantity = cart[i].quantity;
-      let getPrice = await Product.findById(cart[i].product)
-        .select(
-          "price shippingCost tax discount discount_type need_to_buy need_to_View need_to_Register"
-        )
-        .exec();
-      if (cart[i].teamBuy) {
+      let getPrice;
+      console.log("Varaint ID is " + cart[i].variant);
+      //If Variant exist then getPrice from variant other wise from product
+      if (cart[i].variant) {
+        getPrice = await ProductVariant.findById(cart[i].variant)
+          .select("price teamPrice quantity shippingCost  discount")
+          .populate({
+            path: "product",
+            select: "_id tax discountType needToBuy needToView needToRegister",
+          })
+          .exec();
+        console.log("Varaint tax is " + getPrice.tax);
+        object.tax = getPrice.product.tax;
+        object.variant = cart[i].variant;
+      } else {
+        //Get product details
+        getPrice = await Product.findById(cart[i].product)
+          .select(
+            "price teamPrice quantity shippingCost tax discount discountType needToBuy needToView needToRegister"
+          )
+          .exec();
+        object.tax = getPrice.tax;
+      }
+      //Validate if product quantity is enough.
+      if (getPrice && getPrice.quantity < cart[i].quantity) {
+        return res
+          .status(400)
+          .json({ message: "Selected product quanity is not be available" });
+      }
+
+      // Set Object in case order is for teambuy
+      if (cart[i].teamBuy && cart[i].teamBuy == "true") {
+        object.price =
+          getPrice.discount && getPrice.discount > 0
+            ? getPrice.teamPrice -
+              (getPrice.teamPrice * getPrice.discount) / 100
+            : getPrice.teamPrice;
+        object.discount = getPrice.discount;
+        if (cart[i].variant) {
+          object.discountType = getPrice.product.discountType
+            ? getPrice.product.discountType
+            : "Buy";
+          object.needToBuy = getPrice.product.needToBuy;
+          object.needToView = getPrice.product.needToView;
+          object.needToRegister = getPrice.product.needToRegister;
+          object.needToSlash = getPrice.product.needToSlash;
+        } else {
+          object.discountType = getPrice.discountType
+            ? getPrice.discountType
+            : "Buy";
+          object.needToBuy = getPrice.needToBuy;
+          object.needToView = getPrice.needToView;
+          object.needToRegister = getPrice.needToRegister;
+          object.needToSlash = getPrice.needToSlash;
+        }
+        object.teamBuy = cart[i].teamBuy;
+        object.team = cart[i].team;
+      }
+      //Set object in case order is for pricechop
+      else if (cart[i].priceChop && cart[i].priceChop != null) {
+        //validate the priceChop record, if valid take the priceChop discount value
+        const validatePriceChops = await PriceChop.findById({ id }).select(
+          "status owner createdAt"
+        );
+        if (
+          validatePriceChops &&
+          validatePriceChops.status == "Closed" &&
+          validatePriceChops.owner == req.user._id &&
+          validatePriceChops.createdAt > Date.now() - 24 * 60 * 60 * 1000
+        ) {
+          object.price = 0;
+        }
+      }
+      //Set object in case order is a regular buy
+      else {
         object.price =
           getPrice.discount && getPrice.discount > 0
             ? getPrice.price - (getPrice.price * getPrice.discount) / 100
             : getPrice.price;
-        object.discount_type = getPrice.discount_type
-          ? getPrice.discount_type
-          : "Buy";
-        object.need_to_buy = getPrice.need_to_buy;
-        object.need_to_View = getPrice.need_to_View;
-        object.need_to_Register = getPrice.need_to_Register;
-        object.teamBuy = cart[i].teamBuy;
-        object.team = cart[i].team;
-      } else {
-        object.price = getPrice.price;
+        object.discount = getPrice.discount;
       }
+
       object.shippingCost = getPrice.shippingCost;
-      object.tax = getPrice.tax;
+
       cartItems.push(object);
     }
 
@@ -52,22 +121,31 @@ exports.userCart = async (req, res) => {
     let cartTotal = 0;
     let shippingCostTotal = 0;
     let taxTotal = 0;
+    let finalCartTotal = 0;
+
     for (let i = 0; i < cartItems.length; i++) {
       cartTotal = cartTotal + cartItems[i].price * cartItems[i].quantity;
       if (cartItems[i].shippingCost)
         shippingCostTotal = shippingCostTotal + cartItems[i].shippingCost;
       if (cartItems[i].tax)
-        taxTotal = taxTotal + cartItems[i].tax * cartItems[i].quantity;
+        taxTotal =
+          taxTotal +
+          (cartItems[i].tax * cartItems[i].quantity * cartItems[i].price) / 100;
+      cartTotal += taxTotal;
     }
+    finalCartTotal = cartTotal + shippingCostTotal;
+
     //Create Cart
     let newCart = await new Cart({
       cartItems,
       cartTotal,
       shippingCostTotal,
       taxTotal,
+      finalCartTotal,
       user: _id,
     }).save();
-    return res.status(200).json({ cart: newCart._id });
+
+    return res.status(200).json({ newCart });
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
@@ -75,41 +153,98 @@ exports.userCart = async (req, res) => {
 
 exports.applyCoupon = async (req, res) => {
   try {
+    //Set Variables
     const { cartId, coupon } = req.query;
     const { _id } = req.user;
-    // validateMongoDbId(_id);
+
+    //Check if coupon code is valid
     const validCoupon = await Coupon.findOne({
       code: coupon.trim(),
       isActive: true,
       start_date: { $lt: new Date() },
       end_date: { $gt: new Date() },
-    }).select("isPercent discount");
+    }).select("isPercent discount type min_buy max_discount products");
 
     if (validCoupon === null) {
-      return res.status(400).json({ error: "Invalid Coupon" });
+      return res.status(400).json({ type: "Error", message: "Invalid Coupon" });
+    }
+    //Get cart total using cart ID.
+    let { cartItems, cartTotal, couponApplied, shippingCostTotal } =
+      await Cart.findOne({
+        _id: cartId,
+      });
+
+    if (!cartTotal) {
+      return res.status(400).json({ type: "Error", message: "Invalid Cart" });
     }
 
-    let { cartTotal } = await Cart.findOne({
-      _id: cartId,
-    });
-    let totalAfterDiscount = cartTotal;
+    //Set finalCartTotal based on discount
+    let cartTotalAfterCuponDiscount = 0.0;
+    let finalCartTotal = 0.0;
+    let couponDiscount = 0.0;
+
+    //If coupon type is total
+    if (validCoupon.type == "total") {
+      //If coupon type is total, send error if min_buy has not been met
+      if (cartTotal - validCoupon.min_buy <= 0) {
+        return res.status(400).json({
+          type: "Error",
+          message:
+            "Cart total is less than minimum required amount " +
+            validCoupon.min_buy,
+        });
+      }
+      //If cart total is greater than the max_discount, set it to cart coupon discount
+      if (couponDiscount - validCoupon.max_discount > 0) {
+        couponDiscount = validCoupon.max_discount;
+      }
+    } else if (validCoupon.type == "product") {
+      //if coupon type is product, find if cart has the  product which is matching with coupon products
+      //TO DO: Expand to all the cart products, for now, only match first cart item product
+      const cartProduct = cartItems[0].product.find(
+        (x) => x == validCoupon.products
+      );
+      if (!cartProduct) {
+        return res.status(400).json({
+          type: "Error",
+          message: "Coupon can not be used on this product",
+        });
+      }
+    }
+
     if (validCoupon.isPercent) {
-      totalAfterDiscount = (
-        cartTotal -
-        (cartTotal * validCoupon.discount) / 100
-      ).toFixed(2);
+      couponDiscount = (cartTotal * validCoupon.discount) / 100;
     } else {
-      totalAfterDiscount = cartTotal - validCoupon.discount;
+      couponDiscount = validCoupon.discount;
     }
 
-    await Cart.findOneAndUpdate(
+    cartTotalAfterCuponDiscount = cartTotal - couponDiscount;
+    finalCartTotal = (
+      parseFloat(cartTotalAfterCuponDiscount) + parseFloat(shippingCostTotal)
+    ).toFixed(2);
+
+    //Update Cart with coupon code.
+    const updateCartWithCoupon = await Cart.findOneAndUpdate(
       { user: _id },
-      { totalAfterDiscount, couponApplied: validCoupon._id },
+      {
+        couponDiscount,
+        finalCartTotal: finalCartTotal,
+        couponApplied: true,
+        coupon_code: validCoupon._id,
+      },
       { new: true }
     );
-    return res.status(200).json({ totalAfterDiscount: totalAfterDiscount });
+    return res.status(200).json({
+      type: "Success",
+      message: "Coupon Code applied",
+      finalCartTotal: finalCartTotal,
+    });
   } catch (error) {
-    return res.status(400).json({ error: error.message });
+    return res.status(400).json({
+      type: "Error",
+      message: "Something went wrong",
+      error: error.message,
+    });
   }
 };
 
@@ -170,11 +305,20 @@ exports.addItemToCart = (req, res) => {
   });
 };
 
-exports.addItemToCart2 = (req, res) => {
+exports.addItemToCart2 = async (req, res) => {
   Cart.findOne({ user: req.user._id }).exec((error, cart) => {
     if (error) return res.status(400).json({ error });
     if (cart) {
       for (const i in req.body.cartItems) {
+        const validateProductQuanity = false;
+        Product.findOne({
+          _id: req.body.cartItems[i],
+        })
+          .select("_id quanity")
+          .exec((err, quantity) => {
+            validateProductQuanity = true;
+          });
+        console.log("I am here 001 " + validateProductQuanity);
         const productIndex = cart.cartItems.findIndex(
           (_cart) => _cart.product == req.body.cartItems[i].product
         );

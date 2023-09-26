@@ -43,7 +43,7 @@ exports.updateQuestion = async (req, res) => {
         { _id: 0, votes: 1 }
         //queston: 0, _id: 0, answer: 0, __v: 0, createdAt: 0, updatedAt: 0 }
       ).exec((err, ques) => {
-        const questionObj = {};
+        let questionObj = {};
         if (req.body.answer) {
           questionObj.answer = req.body.answer;
           questionObj.answered_by = req.user._id;
@@ -56,6 +56,7 @@ exports.updateQuestion = async (req, res) => {
           if (alreadyVoted < 0) {
             ques.votes.push(req.user._id);
             questionObj.votes = ques.votes;
+            questionObj = { ...questionObj, $inc: { totalVotes: 1 } };
           }
         }
 
@@ -88,8 +89,14 @@ exports.updateQuestion = async (req, res) => {
 
 exports.getQuestions = (req, res) => {
   const args = req.query.prodId ? { product: req.query.prodId } : {};
-  Questions.find(args)
+  const args1 =
+    req.query.includeUnAnswered && req.query.includeUnAnswered == "true"
+      ? { ...args }
+      : { ...args, answer: { $ne: null } };
+  //If Show Un Answered show all the questions otherwise only answered
+  Questions.find(args1)
     .populate({ path: "product", select: ["_id", "name"] })
+    .sort({ totalVotes: -1 })
     .exec((error, questions) => {
       if (error)
         return res.status(400).json({

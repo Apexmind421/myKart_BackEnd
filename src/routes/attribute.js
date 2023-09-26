@@ -6,8 +6,8 @@ const {
   deleteAttribute,
 } = require("../controller/attribute");
 const { requireLogin, middleware } = require("../Validators/validation");
-router.post("/attribute/add", requireLogin, addAttribute);
-router.post("/attribute/get", requireLogin, fetchAttribute);
-router.delete("/attribute", requireLogin, deleteAttribute);
+router.post("/attribute/add", requireLogin, middleware, addAttribute);
+router.get("/attribute", requireLogin, fetchAttribute);
+router.delete("/attribute", requireLogin, middleware, deleteAttribute);
 
 module.exports = router;

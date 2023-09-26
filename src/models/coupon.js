@@ -27,8 +27,8 @@ const couponCodeSchema = new Schema({
   },
   type: {
     type: String,
-    enum: ["product", "cart"],
-    default: "product",
+    enum: ["product", "total"],
+    default: "total",
   },
   discount: {
     type: Number,
@@ -40,9 +40,7 @@ const couponCodeSchema = new Schema({
     required: true,
     default: true,
   },
-  details: {
-    type: String,
-  },
+
   start_date: {
     type: Date,
     required: true,

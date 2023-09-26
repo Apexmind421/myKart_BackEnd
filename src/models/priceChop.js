@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 // A
-const teamSchema = new mongoose.Schema(
+const priceChopSchema = new mongoose.Schema(
   {
     owner: {
       type: mongoose.Schema.Types.ObjectId,
@@ -10,10 +10,6 @@ const teamSchema = new mongoose.Schema(
     product: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Product",
-    },
-    type: {
-      type: String,
-      enum: ["Buy", "View", "Register", "Slash"],
       required: true,
     },
     totalRequired: {
@@ -38,4 +34,4 @@ const teamSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Teams", teamSchema);
+module.exports = mongoose.model("PriceChop", priceChopSchema);

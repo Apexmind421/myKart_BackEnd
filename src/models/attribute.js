@@ -18,6 +18,9 @@ const attributeScehma = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    color_code: {
+      type: String,
+    },
   },
   { timestamps: true }
 );

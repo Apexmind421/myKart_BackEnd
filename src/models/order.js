@@ -33,6 +33,7 @@ const orderSchema = new mongoose.Schema(
           type: mongoose.Schema.Types.ObjectId,
           ref: "Teams",
         },
+        priceChop: { type: mongoose.Schema.Types.ObjectId, ref: "PriceChop" },
       },
     ],
     taxPrice: {
@@ -43,6 +44,10 @@ const orderSchema = new mongoose.Schema(
     shippingPrice: {
       type: Number,
       required: true,
+      default: 0.0,
+    },
+    commission: {
+      type: Number,
       default: 0.0,
     },
     isPaid: {
@@ -70,12 +75,35 @@ const orderSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    status: {
+      type: String,
+      enum: [
+        "pending",
+        "confirmed",
+        "packed",
+        "shipped",
+        "delivered",
+        "returnInitiated",
+        "returnShipped",
+        "returned",
+      ],
+      default: "pending",
+    },
     orderStatus: [
       {
         type: {
           type: String,
-          enum: ["ordered", "packed", "shipped", "delivered"],
-          default: "ordered",
+          enum: [
+            "pending",
+            "confirmed",
+            "packed",
+            "shipped",
+            "delivered",
+            "returnInitiated",
+            "returnShipped",
+            "returned",
+          ],
+          default: "pending",
         },
         date: {
           type: Date,
@@ -87,11 +115,23 @@ const orderSchema = new mongoose.Schema(
         }, */
       },
     ],
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
     couponApplied: {
+      type: Boolean,
+      default: false,
+    },
+    coupon_code: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Coupon",
     },
+    courier_agency: { type: String },
     tracking_code: {
+      type: String,
+    },
+    tracking_url: {
       type: String,
     },
     notes: {
@@ -100,6 +140,8 @@ const orderSchema = new mongoose.Schema(
     delivery_date: {
       type: Date,
     },
+    usedWiseCoins: { type: Number, default: 0 },
+    team: { type: mongoose.Schema.Types.ObjectId, ref: "Teams" },
   },
   { timestamps: true }
 );

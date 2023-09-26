@@ -13,6 +13,7 @@ const questionSchema = new mongoose.Schema(
       ref: "Product",
     },
     votes: [{ type: "String" }],
+    totalVotes: { type: Number, default: 0 },
     //TO DO:{ type: Number, default: 0 },
     user_id: {
       type: mongoose.Schema.Types.ObjectId,

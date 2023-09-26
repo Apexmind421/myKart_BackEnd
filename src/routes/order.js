@@ -2,7 +2,8 @@ const { requireLogin, middleware } = require("../Validators/validation");
 const {
   addOrder,
   getOrders,
-  getOrder,
+  getAllOrders,
+  getOrderDetails,
   deleteOrders,
   updateOrder,
   updateOrderStatus,
@@ -11,10 +12,12 @@ const router = require("express").Router();
 
 router.post("/addOrder", requireLogin, addOrder);
 router.get("/getOrders", requireLogin, getOrders);
-router.post("/getOrder", requireLogin, getOrder);
+router.post("/getOrder", requireLogin, getOrderDetails);
 router.put("/order/details", requireLogin, updateOrder);
-router.put("/order/status", requireLogin, updateOrderStatus);
 //TEMP
 router.delete("/order", requireLogin, deleteOrders);
+//ADMIN API
+router.get("/admin/getOrders", requireLogin, middleware, getAllOrders);
+router.put("/order/status", requireLogin, middleware, updateOrderStatus);
 
 module.exports = router;

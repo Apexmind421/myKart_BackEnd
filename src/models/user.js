@@ -28,14 +28,14 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
       trim: true,
       unique: true,
       lowercase: true,
+      required: [true, "Please provide an email"],
     },
     mobile: {
       type: Number,
-      required: true,
+      required: [true, "Please provide mobile number"],
       unique: true,
     },
     hash_password: {
@@ -44,9 +44,14 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["user", "admin", "seller"],
+      enum: ["user", "admin"],
       default: "user",
     },
+    isSeller: {
+      type: Boolean,
+      default: false,
+    },
+    seller_info: { type: mongoose.Schema.Types.ObjectId, ref: "Seller" },
     isEmailVerified: {
       type: Boolean,
       default: false,
@@ -68,18 +73,24 @@ const userSchema = new mongoose.Schema(
       type: Array,
       //    required: true,
     },
-    referral_code: {
+    referralCode: {
       type: String,
     },
-    referred_by: { type: String },
+    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     isBlocked: {
       type: Boolean,
       default: false,
     },
-    balance: { type: Number, default: 0.0 },
+    wiseCoins: { type: Number, default: 10 },
+    refreshToken: {
+      type: String,
+    },
     passwordChangedAt: Date,
     passwordResetToken: String,
     passwordResetExpires: Date,
+    ip_address: {
+      type: String,
+    },
   },
   { timestamps: true }
 );
@@ -93,6 +104,30 @@ userSchema.virtual("fullName").get(function (pwd) {
   return `${this.firstName}${this.lastName}`;
 });
 
+/**
+ * Check if mobile is taken
+ * @param {string} mobile - The user's mobile
+ * @param {ObjectId} [excludeUserId] - The id of the user to be excluded
+ * @returns {Promise<boolean>}
+ */
+userSchema.statics.isMobileTaken = async function (mobile, excludeUserId) {
+  const user = await this.findOne({ mobile, _id: { $ne: excludeUserId } });
+  return !!user;
+};
+
+// Set passwordChangedAt field to the current time when the user change the password
+userSchema.pre("save", function (next) {
+  if (!this.isModified("password") || this.isNew) return next();
+
+  this.passwordChangedAt = Date.now() - 1000;
+  next();
+});
+
+/**
+ * Check if password matches the user's password
+ * @param {string} password
+ * @returns {Promise<boolean>}
+ */
 userSchema.methods = {
   authenticate: function (password) {
     return bcrypt.compareSync(password, this.hash_password);

@@ -22,6 +22,12 @@ const variantScehma = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    teamPrice: {
+      type: Number,
+    },
+    actualPrice: {
+      type: Number,
+    },
     discount: {
       type: Number,
       default: 0,

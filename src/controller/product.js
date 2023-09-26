@@ -1,5 +1,7 @@
 const Product = require("../models/product");
+const Order = require("../models/order");
 const Category = require("../models/category");
+const Teams = require("../models/teams");
 const ProductViewHistory = require("../models/productViews");
 const Attribute = require("../models/attribute");
 const ProductVariant = require("../models/productVariant");
@@ -13,8 +15,6 @@ const DatauriParser = require("datauri/parser");
 const path = require("path");
 const parser = new DatauriParser();
 const { uploader } = require("../config/cloudinary.config");
-
-const validateMongoDbId = require("../Validators/validateMongodbId");
 
 createProducts = (Products, parentId = null) => {
   const productList = [];
@@ -58,25 +58,88 @@ createCategories = (category, parentId = null) => {
  * 
 ***************************************/
 exports.addProduct = async (req, res) => {
-  const productObj = {
-    name: req.body.name,
-    slug: slugify(req.body.name),
-    brand: req.body.brand,
-    price: req.body.price,
-    offer: req.body.offer,
-    quantity: req.body.quantity,
-    description: req.body.description,
-    category: req.body.category,
-    createdBy: req.user._id,
-    seller: req.user._id,
-    warrentyReturns: req.body.warrentyReturns,
-    lengthInCM: req.body.lengthInCM,
-    weightInCM: req.body.weightInCM,
-    heightInCM: req.body.heightInCM,
-    WeightInGrams: req.body.WeightInGrams,
-    flashsale: req.body.flashsale,
-  };
-  /*
+  try {
+    const productObj = {
+      name: req.body.name,
+      brand: req.body.brand,
+      price: req.body.price,
+      teamPrice: req.body.teamPrice,
+      actualPrice: req.body.actualPrice,
+      offer: req.body.offer,
+      quantity: req.body.quantity,
+      description: req.body.description,
+      category: req.body.category,
+      seller: req.user._id, //TO DO
+      warrentyReturns: req.body.warrentyReturns,
+      lengthInCM: req.body.lengthInCM,
+      widthInCM: req.body.widthInCM,
+      heightInCM: req.body.heightInCM,
+      WeightInGrams: req.body.WeightInGrams,
+      flashSale: req.body.flashSale,
+      slug: slugify(req.body.name),
+      createdBy: req.user._id,
+      discountType: req.body.discountType,
+      needToBuy: req.body.needToBuy,
+      needToView: req.body.needToView,
+      needToRegister: req.body.needToRegister,
+      tax: req.body.tax,
+      onSale: req.body.onSale,
+      discount: req.body.discount,
+      shippingCost: req.body.shippingCost,
+    };
+
+    if (req.files && req.files.length > 0) {
+      console.log("I am here 00007");
+      productObj.productImages = [];
+      for (i in req.files) {
+        const prodFile = parser.format(
+          path.extname(req.files[i].originalname).toString(),
+          req.files[i].buffer
+        );
+
+        const uploadResult = await uploader.upload(prodFile.content);
+        if (i == 0) {
+          productObj.thumbnailImage = uploadResult.secure_url;
+        } else productObj.productImages.push({ img: uploadResult.secure_url });
+      }
+    }
+
+    if (req.body.tags) {
+      const _tags = JSON.parse(req.body.tags);
+      productObj.tags = [];
+      for (i in _tags) {
+        productObj.tags.push(_tags[i].toLowerCase());
+      }
+    }
+
+    if (req.body.inTheBox) {
+      const boxItems = JSON.parse(req.body.inTheBox);
+      productObj.inTheBox = [];
+      for (i in boxItems) {
+        productObj.inTheBox.push(boxItems[i]);
+      }
+    }
+
+    if (req.body.specs) {
+      productObj.specifications = [];
+      const specification = JSON.parse(req.body.specs);
+      for (i in specification) {
+        productObj.specifications.push({
+          specType: specification[i][0],
+          specName: specification[i][1],
+          specValue: specification[i][2],
+        });
+      }
+    }
+
+    if (req.body.attributes) {
+      productObj.attributes = [];
+      const attribute = JSON.parse(req.body.attributes);
+      for (i in attribute) {
+        productObj.attributes.push(attribute[i]);
+      }
+    }
+    /*
   if (req.files && req.files.length > 0) {
     productObj.productImages = [];
     for (i in req.files) {
@@ -88,24 +151,6 @@ exports.addProduct = async (req, res) => {
       productObj.productImages.push({ img: uploadResult.secure_url });
     }
   }
-*/
-  if (req.files && req.files.length > 0) {
-    console.log("I am here 00007");
-    productObj.productImages = [];
-    for (i in req.files) {
-      const prodFile = parser.format(
-        path.extname(req.files[i].originalname).toString(),
-        req.files[i].buffer
-      );
-
-      const uploadResult = await uploader.upload(prodFile.content);
-      if (i == 0) {
-        productObj.thumbnailImage = uploadResult.secure_url;
-      } else productObj.productImages.push({ img: uploadResult.secure_url });
-    }
-  }
-
-  /*
   if (req.body.avialableCities) {
     const avialableCities = JSON.parse(req.body.avialableCities);
     productObj.avialableCities = [];
@@ -113,43 +158,6 @@ exports.addProduct = async (req, res) => {
       productObj.avialableCities.push(avialableCities[i]);
     }
   }
-*/
-  if (req.body.tags) {
-    const _tags = JSON.parse(req.body.tags);
-    productObj.tags = [];
-    for (i in _tags) {
-      productObj.tags.push(_tags[i].toLowerCase());
-    }
-  }
-
-  if (req.body.inTheBox) {
-    const boxItems = JSON.parse(req.body.inTheBox);
-    productObj.inTheBox = [];
-    for (i in boxItems) {
-      productObj.inTheBox.push({ item: boxItems[i] });
-    }
-  }
-
-  if (req.body.specs) {
-    productObj.specifications = [];
-    const specification = JSON.parse(req.body.specs);
-    for (i in specification) {
-      productObj.specifications.push({
-        specType: specification[i][0],
-        specName: specification[i][1],
-        specValue: specification[i][2],
-      });
-    }
-  }
-
-  if (req.body.attributes) {
-    productObj.attributes = [];
-    const attribute = JSON.parse(req.body.attributes);
-    for (i in attribute) {
-      productObj.attributes.push(attribute[i]);
-    }
-  }
-  /*
   if (req.body.productVariants) {
     product.variants = [];
     const productVariants = JSON.parse(req.body.productVariants);
@@ -159,7 +167,6 @@ exports.addProduct = async (req, res) => {
       for (i in variantBody) {
         _variant.push(variantBody[i]);
       }
-
       const variant = {
         variations: _variant,
         varaiantPrice: req.body.varaiantPrice,
@@ -171,70 +178,77 @@ exports.addProduct = async (req, res) => {
   }
   */
 
-  console.log("addProduct 001 " + JSON.stringify(productObj));
-  const _prod = new Product(productObj);
-  _prod.save((error, product) => {
-    if (error) return res.status(400).json({ error });
-    if (product) {
-      if (req.body.productVariants) {
-        const variantObjArray = [];
-        const productVariants = req.body.productVariants;
-        for (j in productVariants) {
-          let _variant = [];
-          const variantBody = productVariants[j].variants;
-          for (i in variantBody) {
-            _variant.push(variantBody[i]);
+    console.log("addProduct 001 " + JSON.stringify(productObj));
+    const _prod = new Product(productObj);
+    _prod.save((error, product) => {
+      if (error) return res.status(400).json({ error });
+      if (product) {
+        if (req.body.productVariants) {
+          const variantObjArray = [];
+          const productVariants = req.body.productVariants;
+          for (j in productVariants) {
+            let _variant = [];
+            const variantBody = productVariants[j].variants;
+            for (i in variantBody) {
+              _variant.push(variantBody[i]);
+            }
+            const variantObj = {
+              variations: _variant,
+              price: productVariants[j].price,
+              teamPrice: productVariants[j].teamPrice,
+              actualPrice: productVariants[j].actualPrice,
+              quantity: productVariants[j].quantity,
+              discount: productVariants[j].discount
+                ? productVariants[j].discount
+                : "",
+              shippingCost: productVariants[j].shippingCost
+                ? productVariants[j].shippingCost
+                : "",
+              lengthInCM: productVariants[j].lengthInCM
+                ? productVariants[j].lengthInCM
+                : "",
+              widthInCM: productVariants[j].widthInCM
+                ? productVariants[j].widthInCM
+                : "",
+              heightInCM: productVariants[j].heightInCM
+                ? productVariants[j].heightInCM
+                : "",
+              WeightInGrams: productVariants[j].WeightInGrams
+                ? productVariants[j].WeightInGrams
+                : "",
+              product: product._id,
+              sku: Math.random().toString(36).substring(2, 11),
+            };
+            variantObjArray.push(variantObj);
           }
-          const variantObj = {
-            variations: _variant,
-            price: productVariants[j].price,
-            quantity: productVariants[j].quantity,
-            discount: productVariants[j].discount
-              ? productVariants[j].discount
-              : "",
-            shippingCost: productVariants[j].shippingCost
-              ? productVariants[j].shippingCost
-              : "",
-            lengthInCM: productVariants[j].lengthInCM
-              ? productVariants[j].lengthInCM
-              : "",
-            widthInCM: productVariants[j].widthInCM
-              ? productVariants[j].widthInCM
-              : "",
-            heightInCM: productVariants[j].heightInCM
-              ? productVariants[j].heightInCM
-              : "",
-            WeightInGrams: productVariants[j].WeightInGrams
-              ? productVariants[j].WeightInGrams
-              : "",
-            product: product._id,
-            sku: Math.random().toString(36).substring(2, 11),
-          };
-          variantObjArray.push(variantObj);
+          ProductVariant.insertMany(variantObjArray).then(
+            (err, _prodVariant) => {
+              if (err) {
+                res.status(400).json({
+                  message: err,
+                });
+              }
+              if (_prodVariant) {
+                return res.status(201).json({
+                  product: product,
+                  productVariants: _prodVariant,
+                  message: "Product created sucessfully",
+                });
+              }
+            }
+          );
+        } else {
+          return res.status(201).json({
+            product: product,
+            message: "Product created sucessfully",
+          });
         }
-        ProductVariant.insertMany(variantObjArray).then((err, _prodVariant) => {
-          if (err) {
-            res.status(400).json({
-              message: err,
-            });
-          }
-          if (_prodVariant) {
-            return res.status(201).json({
-              product: product,
-              productVariants: _prodVariant,
-              message: "Product created sucessfully",
-            });
-          }
-        });
-      } else {
-        return res.status(201).json({
-          product: product,
-          message: "Product created sucessfully",
-        });
-      }
-    } else return res.status(400).json({ message: "Could not create product" });
-  });
-
+      } else
+        return res.status(400).json({ message: "Could not create product" });
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
   //res.status(200).json({file: req.files, body: req.body});
 };
 exports.addProductTags = (req, res) => {
@@ -434,7 +448,6 @@ exports.addProductAttributes = (req, res) => {
 exports.updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    validateMongoDbId(id);
     //  console.log("xxx 1 " + JSON.stringify(req.body));
     if (req.body.name) {
       req.body.slug = slugify(req.body.name);
@@ -458,7 +471,7 @@ exports.updateProduct = async (req, res) => {
     res.status(200).json(_updateProduct);
   } catch (error) {
     //throw new Error(error);
-    return res.status(400).json({ message: err.message });
+    return res.status(400).json({ message: error.message });
   }
 };
 
@@ -487,6 +500,11 @@ exports.addProductVariant = (req, res) => {
           const variantObjArray = [];
           const productVariants = req.body.productVariants;
           for (j in productVariants) {
+            if (productVariants[j].quantity > product.quanity) {
+              return res.status(400).json({
+                message: "Product variant quanity exceeded product quanity",
+              });
+            }
             let _variant = [];
             const variantBody = productVariants[j].variants;
             for (i in variantBody) {
@@ -494,52 +512,64 @@ exports.addProductVariant = (req, res) => {
             }
             const variantObj = {
               variations: _variant,
-              price: productVariants[j].price,
+              price: productVariants[j].price
+                ? productVariants[j].price
+                : product.price,
+              actualPrice: productVariants[j].actualPrice
+                ? productVariants[j].actualPrice
+                : product.actualPrice,
+              teamPrice: productVariants[j].teamPrice
+                ? productVariants[j].teamPrice
+                : product.teamPrice,
               quantity: productVariants[j].quantity,
               discount: productVariants[j].discount
                 ? productVariants[j].discount
-                : 0,
+                : product.discount,
               shippingCost: productVariants[j].shippingCost
                 ? productVariants[j].shippingCost
-                : 0,
+                : product.shippingCost,
               lengthInCM: productVariants[j].lengthInCM
                 ? productVariants[j].lengthInCM
-                : "",
+                : product.lengthInCM,
               widthInCM: productVariants[j].widthInCM
                 ? productVariants[j].widthInCM
-                : "",
+                : product.widthInCM,
               heightInCM: productVariants[j].heightInCM
                 ? productVariants[j].heightInCM
-                : "",
+                : product.heightInCM,
               WeightInGrams: productVariants[j].WeightInGrams
                 ? productVariants[j].WeightInGrams
-                : "",
+                : product.WeightInGrams,
               product: product._id,
               sku: Math.random().toString(36).substring(2, 11),
             };
             variantObjArray.push(variantObj);
           }
-          ProductVariant.insertMany(variantObjArray)
-            //  .populate("variations")
-            .then((err, _prodVariant) => {
-              if (err) {
+          try {
+            ProductVariant.insertMany(variantObjArray)
+              //  .populate("variations")
+              .then((_prodVariant) => {
+                /*   if (err) {
                 return res.status(400).json({ err });
-              }
-              if (_prodVariant) {
-                return res.status(201).json({
-                  product: prod,
-                  productVariants: _prodVariant,
-                  message: "Variants saved sucessfully",
-                });
-              }
-            });
+              } */
+                if (_prodVariant) {
+                  return res.status(201).json({
+                    product: product,
+                    productVariants: _prodVariant,
+                    message: "Variants saved sucessfully",
+                  });
+                }
+              });
+          } catch (error) {
+            return res.status(500).json({ message: error.message });
+          }
         } else {
-          return res.status(400).json({ error: "Varaiants are required" });
+          return res.status(400).json({ message: "Varaiants are required" });
         }
       }
     });
   } else {
-    return res.status(400).json({ error: "Product ID is required" });
+    return res.status(400).json({ message: "Product ID is required" });
   }
 };
 //Update the productVariant using the varaint ID
@@ -573,17 +603,24 @@ exports.updateProductVariant = async (req, res) => {
 //Search the productVariant using the varaint ID
 exports.fetchProductVariants = async (req, res) => {
   const findArgs = req.query.id ? { product: req.query.id } : {};
-  ProductVariant.find(findArgs).exec((err, data) => {
-    if (err) {
-      return res.status(400).json({
-        error: "Variants are not found" + err,
+  ProductVariant.find(findArgs, {
+    product: 0,
+    __v: 0,
+    createdAt: 0,
+    updatedAt: 0,
+  })
+    .populate({ path: "variations", select: ["name", "value"] })
+    .exec((err, data) => {
+      if (err) {
+        return res.status(400).json({
+          error: "Variants are not found" + err,
+        });
+      }
+      res.json({
+        size: data.length,
+        data,
       });
-    }
-    res.json({
-      size: data.length,
-      data,
     });
-  });
 };
 //Delete the productVaraint using the varinat ID
 exports.deleteProductVariant = (req, res) => {
@@ -856,57 +893,282 @@ exports.fetchProductDetails1 = async (req, res) => {
     return res.status(400).json({ error: error.message });
   }
 };
-exports.fetchProductDetails = (req, res) => {
-  const id = req.query.id ? { _id: req.query.id } : {};
-
-  Product.findOne(
-    { ...id },
-    {
-      flashSale: 0,
-      onSale: 0,
+/*
+ * Fetch Product Details:
+ * Check if referenceID is present
+ * If referenceID is present, verify if reference is teambuy,
+ * If teamBuy, verify if the type is View, Buy, Slash
+ * If Type is View,
+ *    *
+ * If Type is Buy,
+ * If Type is Slash
+ */
+exports.fetchProductDetails = async (req, res) => {
+  try {
+    //Set Variables
+    const id = req.query.id ? { _id: req.query.id } : {};
+    const referenceID = req.query.referenceID
+      ? req.query.referenceID
+      : undefined;
+    let teamBuy = false;
+    let args = {};
+    let teamExpired = false;
+    let teamType;
+    let closeGroup = false;
+    const orderStatus = {
+      type: "confirmed",
+    };
+    let isTeamValid;
+    const fieldsToExclude = {
       updatedAt: 0,
       createdAt: 0,
       __v: 0,
       createdBy: 0,
+    };
+
+    //Validate if team reference ID is valid
+    if (referenceID) {
+      isTeamValid = await Teams.findById(referenceID).select(
+        "totalRequired currentRequired status owner members createdAt type"
+      );
+      //If Team found with the reference id, validate whether team expired or user is already a member of the team.
+      if (isTeamValid && isTeamValid.status == "Open") {
+        teamType = isTeamValid.type;
+
+        //Check if the team member is already exist, and team is not yet completed
+        const alreadyMember = isTeamValid.members.findIndex(
+          (x) => x == req.user._id
+        );
+        if (alreadyMember < 0 && isTeamValid.currentRequired > 0) {
+          teamBuy = true;
+          //In case of only team Type is view or slash, update the team member
+          if (teamType == "View" || teamType == "Slash") {
+            args = {
+              $push: {
+                members: req.user._id,
+              },
+            };
+          }
+        }
+
+        //Check if the team expired, ie. if created date is older than 24 hrs.
+        if (
+          teamBuy == true &&
+          isTeamValid.createdAt < Date.now() - 24 * 60 * 60 * 1000
+        ) {
+          args = { status: "Cancelled" };
+          teamExpired = true;
+        }
+
+        //Check if the user is the last member in the group, close the team.
+        if (
+          teamExpired == false &&
+          teamBuy == true &&
+          isTeamValid.currentRequired < 2 &&
+          (teamType == "View" || teamType == "Slash")
+        ) {
+          args = { ...args, status: "Closed" };
+          closeGroup = true;
+        }
+      }
     }
-  )
-    // .populate("options")
-    // .populate("variants.variations")
-    // .populate("seller")
-    //.populate({ path: "variants", select: ["name"] })
-    .populate({ path: "category", select: ["name"] })
-    /*  .populate({
+    //Fetch Product Variant details
+    if (id) {
+      Product.findOne({ ...id }, fieldsToExclude)
+        .populate({ path: "category", select: ["name"] })
+        .populate({ path: "attributes", select: ["name", "value"] })
+        .exec((error, product) => {
+          if (error)
+            return res.status(400).json({
+              error,
+            });
+          if (product) {
+            //Limit the product reviews to show to 5.
+            //TO DO: Think of a better way.
+            let limitedReviews = product.reviews.reverse().slice(0, 5);
+            product.reviews = limitedReviews;
+
+            // Create history record for product view
+            const productViews = ProductViewHistory.create({
+              product: product._id,
+              viewed_by: req.user._id,
+              category: product.category,
+              view_date: new Date(),
+            });
+
+            //Update the product by incrementing views by 1.
+            Product.findOneAndUpdate(
+              { _id: product._id },
+              { $inc: { views: 1 } },
+              { new: true }
+            ).exec();
+
+            //Update team record in case reference ID and team buy are there.
+            //Update when team type is view or slash, with args
+            //If type is others, update only when team is expired.
+            //TO DO: Check if team is expired or closed.
+            //TO DO: If team buy is View or slash,
+            //           if the currentRequired reaches zero, update relavent orders to confirmed
+
+            if (
+              teamBuy == true &&
+              teamExpired == false &&
+              (teamType == "View" || teamType == "Slash")
+            ) {
+              Teams.findByIdAndUpdate(
+                referenceID,
+                { ...args, $inc: { currentRequired: -1 } },
+                { new: true }
+              ).exec();
+              //Query orders table where items team is matched with referenceID
+              if (closeGroup) {
+                Order.findOneAndUpdate(
+                  { team: referenceID },
+                  { $push: { orderStatus: orderStatus } }
+                ).exec();
+              }
+            }
+            if (teamBuy == true && teamExpired == true) {
+              Teams.findByIdAndUpdate(
+                referenceID,
+                { ...args },
+                { new: true }
+              ).exec();
+            }
+            return res.status(200).json(product);
+          } else {
+            return res
+              .status(400)
+              .json({ message: "not able to find the product" });
+          }
+        });
+    } else {
+      return res.status(400).json({ message: "Please provide the product id" });
+    }
+  } catch (err) {
+    return res
+      .status(500)
+      .json({ type: "Error", message: "Something went wrong" });
+  }
+};
+exports.fetchProductDetails5 = async (req, res) => {
+  const id = req.query.id ? { _id: req.query.id } : {};
+  const referenceID = req.query.referenceID ? req.query.referenceID : "";
+  let teamBuy = req.query.teamBuy ? req.query.teamBuy : "false";
+  let args = {};
+  let teamExpired = "false";
+  if (teamBuy == "true" && referenceID != "") {
+    //Validate if team reference ID is valid
+    const isTeamValid = await Teams.findById(referenceID).select(
+      "totalRequired currentRequired status owner members createdAt type"
+    );
+    if (isTeamValid && isTeamValid.type == "View") {
+      const alreadyMember = isTeamValid.members.findIndex(
+        (x) => x == req.user._id
+      );
+      if (alreadyMember > -1) {
+        teamBuy = "false";
+      } else {
+        args = {
+          $push: {
+            members: req.user._id,
+          },
+        };
+      }
+      if (isTeamValid.createdAt < Date.now() - 24 * 60 * 60 * 1000) {
+        args = { status: "Cancelled" };
+        teamExpired = "true";
+      }
+      if (teamBuy == "true" && isTeamValid.currentRequired < 1) {
+        teamBuy = "false";
+      }
+      if (teamBuy == "true" && isTeamValid.currentRequired < 2) {
+        args = { ...args, status: "Closed" };
+      }
+    } else {
+      teamBuy = "false";
+    }
+  }
+  //Fetch Product Variant details
+  if (id) {
+    /* TO DO: Remove if we want to show product variants in the product details
+     const productVariants = await ProductVariant.find(
+      {
+        product: req.query.id,
+      },
+      { product: 0, __v: 0, createdAt: 0, updatedAt: 0 }
+    ).populate({ path: "variations", select: ["name", "value"] });*/
+    Product.findOne(
+      { ...id },
+      {
+        updatedAt: 0,
+        createdAt: 0,
+        __v: 0,
+        createdBy: 0,
+      }
+    )
+      // .populate("options")
+      // .populate("variants.variations")
+      // .populate("seller")
+      //.populate({ path: "variants", select: ["name"] })
+      .populate({ path: "category", select: ["name"] })
+      .populate({ path: "attributes", select: ["name", "value"] })
+      // .populate("attributes")
+      /*  .populate({
       path: "seller",
       select: ["username"],
       populate: { path: "user", select: ["_id"] },
     }) */
-    .exec((error, product) => {
-      if (error)
-        return res.status(400).json({
-          error,
-        });
-      if (product) {
-        //Limit the product views to show.
-        let limmitedReviews = product.reviews.reverse().slice(0, 5);
-        product.reviews = limmitedReviews;
-        const productViews = ProductViewHistory.create({
-          product: product._id,
-          viewed_by: req.user._id,
-          category: product.category,
-          view_date: new Date(),
-        });
-        Product.findOneAndUpdate(
-          { _id: product._id },
-          { $inc: { views: 1 } },
-          { new: true }
-        ).exec();
-        return res.status(200).json({ product });
-      } else {
-        return res
-          .status(400)
-          .json({ message: "not able to find the product" });
-      }
-    });
+      .exec((error, product) => {
+        if (error)
+          return res.status(400).json({
+            error,
+          });
+        if (product) {
+          //Limit the product views to show.
+          let limitedReviews = product.reviews.reverse().slice(0, 5);
+          product.reviews = limitedReviews;
+
+          // Create history record for product view
+          const productViews = ProductViewHistory.create({
+            product: product._id,
+            viewed_by: req.user._id,
+            category: product.category,
+            view_date: new Date(),
+          });
+          //Update team record in case reference ID and team buy are there.
+          //TO DO: Check if team is expired or closed.
+          if (teamBuy == "true" && teamExpired == "false") {
+            Teams.findByIdAndUpdate(
+              referenceID,
+              { ...args, $inc: { currentRequired: -1 } },
+              { new: true }
+            ).exec();
+          }
+          if (teamBuy == "true" && teamExpired == "true") {
+            Teams.findByIdAndUpdate(
+              referenceID,
+              { ...args },
+              { new: true }
+            ).exec();
+          }
+
+          Product.findOneAndUpdate(
+            { _id: product._id },
+            { $inc: { views: 1 } },
+            { new: true }
+          ).exec();
+          return res.status(200).json({ product });
+          //return res.status(200).json({ product, productVariants });
+        } else {
+          return res
+            .status(400)
+            .json({ message: "not able to find the product" });
+        }
+      });
+  } else {
+    return res.status(400).json({ message: "Please provide the product id" });
+  }
 };
 
 /***************************************

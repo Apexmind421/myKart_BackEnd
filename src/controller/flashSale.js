@@ -1,7 +1,7 @@
 const FlashSale = require("../models/flashSale");
 const Product = require("../models/product");
 const slugify = require("slugify");
-const validateMongoDbId = require("../Validators/validateMongodbId");
+//const validateMongoDbId = require("../Validators/validateMongodbId");
 const { cloudinaryUploadImg } = require("../utils/cloudinary");
 const fs = require("fs");
 
@@ -54,7 +54,7 @@ exports.addFlashSale = async (req, res) => {
 exports.updateFlashSale = async (req, res) => {
   try {
     const { id } = req.params;
-    validateMongoDbId(id);
+    //validateMongoDbId(id);
     const flashSaleObj = req.body;
     if (req.file) {
       const uploader = (path) => cloudinaryUploadImg(path, "images");
@@ -78,10 +78,14 @@ exports.updateFlashSale = async (req, res) => {
     return res.status(400).json({ message: err.message });
   }
 };
-exports.deleteFlashSale = (req, res) => {
+exports.deleteFlashSale = async (req, res) => {
   try {
     const { id } = req.params;
-    validateMongoDbId(id);
+    //validateMongoDbId(id);
+    const removeFlashSale = await Product.updateMany(
+      { flashSale: id },
+      { $set: { flashSale: null } }
+    );
     FlashSale.findOneAndDelete({ _id: id }).exec((error, flashSale) => {
       if (error) return res.status(400).json({ error });
       if (flashSale) {
@@ -92,7 +96,11 @@ exports.deleteFlashSale = (req, res) => {
     return res.status(400).json({ message: err.message });
   }
 };
-exports.deleteAllFlashSales = (req, res) => {
+exports.deleteAllFlashSales = async (req, res) => {
+  const removeFlashSale = await Product.updateMany(
+    {},
+    { $set: { flashSale: null } }
+  );
   FlashSale.deleteMany().exec((error, result) => {
     if (error) return res.status(400).json({ error });
     if (result) {
@@ -150,6 +158,8 @@ exports.getFlashSaleProducts = (req, res) => {
               }
               res.status(200).json({ "flashSale items": products });
             });
+        } else {
+          return res.status(400).json({ message: "No Featured flashsale" });
         }
       });
   } catch (err) {

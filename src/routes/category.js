@@ -52,6 +52,7 @@ Routes
 router.post(
   "/category/add",
   requireLogin,
+  middleware,
   uploadImage.array("categoryImage"),
   //uploadImage.array("banner"),
   //upload.array("categoryImage"),

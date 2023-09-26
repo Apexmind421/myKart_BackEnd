@@ -98,6 +98,19 @@ exports.middleware = (req, res, next) => {
     return res.status(400).json({ status: "fail", message: "Access Denied" });
   next();
 };
+
+exports.createActivationLink = (obj, expiryTime) => {
+  return jwt.sign(obj, process.env.ACTIVATION_SECRET, {
+    expiresIn: expiryTime,
+  });
+};
+
+exports.verifyActivationLink = (activation_token, expiryTime) => {
+  return jwt.verify(activation_token, process.env.ACTIVATION_SECRET, {
+    expiresIn: expiryTime,
+  });
+};
+
 /*
 exports._doMultipleUpload = (req) => {
   if (req.files) {
