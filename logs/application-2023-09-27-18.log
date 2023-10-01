@@ -1,0 +1,19 @@
+info:  Sep-27-2023 18:05:34: 	MongoDB Server connected
+info:  Sep-27-2023 18:06:46: 	MongoDB Server connected
+info:  Sep-27-2023 18:12:34: 	MongoDB Server connected
+info:  Sep-27-2023 18:12:44: 	MongoDB Server connected
+info:  Sep-27-2023 18:23:29: 	MongoDB Server connected
+info:  Sep-27-2023 18:36:24: 	truePOST /api/admin/login 200 - 284.264 ms
+error:  Sep-27-2023 18:39:22: 	truePOST /api/addSetting 404 - 4.188 ms - message: -
+info:  Sep-27-2023 18:42:33: 	MongoDB Server connected
+info:  Sep-27-2023 18:45:19: 	MongoDB Server connected
+info:  Sep-27-2023 18:45:21: 	truePOST /api/addSetting 201 - 2040.509 ms
+info:  Sep-27-2023 18:47:25: 	truePOST /api/addSetting 201 - 215.608 ms
+info:  Sep-27-2023 18:48:03: 	truePOST /api/addSetting 201 - 182.245 ms
+info:  Sep-27-2023 18:49:54: 	truePOST /api/login 200 - 509.939 ms
+info:  Sep-27-2023 18:50:58: 	MongoDB Server connected
+info:  Sep-27-2023 18:51:02: 	trueGET /api/getAllSettings 201 - 183.726 ms
+info:  Sep-27-2023 18:51:32: 	trueGET /api/getAllSettings 201 - 158.962 ms
+info:  Sep-27-2023 18:52:11: 	trueGET /api/getSettingById?id=651407bf7d3123cad617c483 201 - 199.461 ms
+error:  Sep-27-2023 18:57:59: 	addSetting::: 
+error:  Sep-27-2023 18:57:59: 	truePOST /api/addSetting 400 - 65.553 ms - message: -

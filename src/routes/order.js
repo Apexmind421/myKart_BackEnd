@@ -8,6 +8,7 @@ const {
   updateOrder,
   updateOrderStatus,
 } = require("../controller/order");
+const { invoice } = require("../controller/invoice");
 const router = require("express").Router();
 
 router.post("/addOrder", requireLogin, addOrder);
@@ -19,5 +20,8 @@ router.delete("/order", requireLogin, deleteOrders);
 //ADMIN API
 router.get("/admin/getOrders", requireLogin, middleware, getAllOrders);
 router.put("/order/status", requireLogin, middleware, updateOrderStatus);
+
+//Test Invoice
+router.get("/invoice", invoice);
 
 module.exports = router;

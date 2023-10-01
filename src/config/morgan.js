@@ -1,20 +1,30 @@
-import morgan from 'morgan';
-import config from './config';
-import logger from './logger';
+const morgan = require("morgan");
+const config = require("./config");
 
-morgan.token('message', (req, res) => res.locals.errorMessage || '');
+const env = require("dotenv");
+const { logger } = require("./logger");
 
-const getIpFormat = () =>
-  config.env === 'production' ? ':remote-addr - ' : '';
+morgan.token("message", (req, res) => res.locals.errorMessage || "");
+
+const getIpFormat = () => {
+  const env = process.env.NODE_ENV || "development";
+  return env !== "development";
+};
+//process.env.NODE_ENV === "production" ? ":remote-addr - " : "";
 const successResponseFormat = `${getIpFormat()}:method :url :status - :response-time ms`;
 const errorResponseFormat = `${getIpFormat()}:method :url :status - :response-time ms - message: :message`;
 
-export const successHandle = morgan(successResponseFormat, {
+const successMorganHandler = morgan(successResponseFormat, {
   skip: (req, res) => res.statusCode >= 400,
-  stream: { write: (message) => logger.info(message.trim()) }
+  stream: { write: (message) => logger.info(message.trim()) },
 });
 
-export const errorHandle = morgan(errorResponseFormat, {
+const errorMorganHandler = morgan(errorResponseFormat, {
   skip: (req, res) => res.statusCode < 400,
-  stream: { write: (message) => logger.error(message.trim()) }
+  stream: { write: (message) => logger.error(message.trim()) },
 });
+
+module.exports = {
+  successMorganHandler,
+  errorMorganHandler,
+};

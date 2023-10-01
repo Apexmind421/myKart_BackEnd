@@ -38,6 +38,9 @@ const userSchema = new mongoose.Schema(
       required: [true, "Please provide mobile number"],
       unique: true,
     },
+    phoneOtp: {
+      type: String,
+    },
     hash_password: {
       type: String,
       required: true,
@@ -87,10 +90,9 @@ const userSchema = new mongoose.Schema(
     },
     passwordChangedAt: Date,
     passwordResetToken: String,
-    passwordResetExpires: Date,
-    ip_address: {
-      type: String,
-    },
+    tokenExpires: Date,
+    numberOfFailedLogins: { type: Number, default: 0 },
+    lockedTill: { type: Date },
   },
   { timestamps: true }
 );

@@ -14,46 +14,56 @@ const {
   generateResetPasswordToken,
 } = require("../config/generateTokens");
 const sendEmail = require("../utils/email");
-module.exports.register = (req, res) => {
-  try {
-    User.findOne({ mobile: req.body.mobile }).exec(async (error, user) => {
-      //In case of any error in searching user send error.
-      if (error)
-        return res.status(400).json({
-          type: "Error",
-          message: "Something went wrong",
-        });
-      //If user is already exist send error
-      if (user) {
-        return res.status(401).json({
-          type: "Error",
-          message: "User is already registered",
-        });
-      }
-      //If user is not exist, create user
-      else {
-        const { email, mobile, password, referralCode, referredBy } = req.body;
-        const hash_password = await bcrypt.hash(password, 10);
-        const _user = await User.create({
-          email,
-          mobile,
-          referralCode,
-          referredBy,
-          hash_password,
-          username: shortid.generate(),
-        });
-        _user.hash_password = undefined;
+const { generateOTP, sendOTP } = require("../utils/otp");
 
-        const tokens = await generateAuthTokens(_user);
-        return res.status(201).json({
-          type: "Success",
-          message: "User created successfully",
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
-          user: _user,
-          expireTime: Date.now() + 60 * 60 * 1000,
-        });
-        /* const _user = new User({
+module.exports.register = async (req, res) => {
+  try {
+    //Check input parameters
+    const mobile = req.body.mobile;
+
+    //Check if user is already exist
+    const findUser = await User.findOne({ mobile });
+
+    //If user is exist and is blocked
+    if (findUser && findUser.isBlocked) {
+      return res.status(400).json({
+        type: "Error",
+        message: "User account is locked, contact call center",
+      });
+    }
+    //If user is exist and mobile is not verified
+    else if (findUser && !findUser.isMobileVerified) {
+      // Generate and Send OTP user's mobile number
+      const otp = generateOTP(6);
+      // save otp to user collection
+      findUser.phoneOtp = otp;
+      findUser.tokenExpires = Date.now() + 5 * 60 * 1000; //5 mins
+      await findUser.save();
+      // send otp to phone number
+      await sendOTP({
+        message: `Your OTP is ${otp}`,
+        contactNumber: findUser.mobile,
+      });
+      //Send response
+      return res.status(201).json({
+        type: "Success",
+        message: "OTP sent to mobile number",
+        user: findUser._id,
+        otp,
+      });
+    } //If user is exist and mobile is verified
+    else if (findUser && findUser.isMobileVerified) {
+      return res.status(400).json({
+        type: "Error",
+        message: "User account is already exist",
+      });
+    } else {
+      //Set remaining input parameters
+      const { email, password, referralCode, referredBy } = req.body;
+      const hash_password = await bcrypt.hash(password, 10);
+
+      //Create user
+      const _user = await User.create({
         email,
         mobile,
         referralCode,
@@ -61,83 +71,46 @@ module.exports.register = (req, res) => {
         hash_password,
         username: shortid.generate(),
       });
-      _user.save((error, data) => {
-        //send error in case of any error in user creation.
-        if (error) {
-          return res.status(400).json({
-            type: "Error",
-            message: "Something went wrong " + error,
-          });
-        }
+      //_user.hash_password = undefined;
 
-        if (data) {
-          console.log("test3");
-          const token = jwt.sign(
-            { _id: data._id, role: data.role },
-            process.env.JWT_SECRET,
-            { expiresIn: "3h" }
-          );
-          const refreshtoken = jwt.sign(
-            { _id: data._id, role: data.role },
-            process.env.REFRESH_TOKEN_SECRET,
-            { expiresIn: "3w" }
-          );
-          const {
-            _id,
-            firstName,
-            lastName,
-            email,
-            role,
-            profilePicture,
-            mobile,
-            username,
-            isMobileVerified,
-            referralCode,
-            referredBy,
-            isBlocked,
-            balance,
-          } = data;
-          return res.status(201).json({
-            type: "Success",
-            message: "User created successfully",
-            token,
-            refreshtoken,
-            user: {
-              _id,
-              firstName,
-              lastName,
-              email,
-              role,
-              username,
-              mobile,
-              profilePicture,
-              isMobileVerified,
-              referralCode,
-              referredBy,
-              isBlocked,
-              balance,
-            },
-            expireTime: Date.now() + 60 * 60 * 1000,
-          });
-        }
-      });*/
-      }
-    });
+      // Generate and Send OTP user's mobile number
+      const otp = generateOTP(6);
+      // save otp to user collection
+      _user.phoneOtp = otp;
+      _user.tokenExpires = Date.now() + 5 * 60 * 1000; //5 mins
+      await _user.save();
+      // send otp to phone number
+      await sendOTP({
+        message: `Your OTP is ${otp}`,
+        contactNumber: _user.mobile,
+      });
+      //Send response
+      return res.status(201).json({
+        type: "Success",
+        message: "User account created and OTP sent to mobile number",
+        user: _user._id,
+        expireTime: Date.now() + 60 * 60 * 1000,
+        otp,
+      });
+    }
   } catch (error) {
     return res.status(400).json({
       type: "Error",
       message: "Something went wrong",
+      error: error.message,
     });
   }
 };
 
 //Login User
 module.exports.loginUser = async (req, res) => {
+  //TO DO: Add email OTP
   try {
     const { mobile, password } = req.body;
     const findUser = await User.findOne({ mobile });
     if (findUser && (await findUser.authenticate(password))) {
       if (findUser.isBlocked) {
+        //TO DO:Try to add to Login attempts table
         return res.status(400).json({
           message: "User account is blocked",
           type: "Error",
@@ -170,6 +143,7 @@ module.exports.loginUser = async (req, res) => {
         wiseCoins: findUser.wiseCoins,
         refreshToken: updateuser.refreshToken,
       };
+      //TO DO:Try to add to Login attempts table
       return res.status(200).json({
         token,
         refreshToken,
@@ -179,6 +153,7 @@ module.exports.loginUser = async (req, res) => {
         type: "Success",
       });
     } else {
+      //TO DO:Try to add to Login attempts table
       return res.status(400).json({
         type: "Error",
         message: "Invalid Credentials",
@@ -190,6 +165,106 @@ module.exports.loginUser = async (req, res) => {
       message: "Something went wrong",
       error: error.message,
     });
+  }
+};
+
+module.exports.verifyPhoneOtp = async (req, res) => {
+  try {
+    const { otp, userId } = req.body;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(400).json({ message: "USER_NOT_FOUND_ERR" });
+    }
+
+    if (user.phoneOtp !== otp) {
+      //TO DO:Update number of failed logins,
+      //if the count of failedLogins is more than 3 in last 1 hour
+      //or more than 8 in last 12 hours
+      let updateDoc = {
+        $inc: { numberOfFailedLogins: user.numberOfFailedLogins + 1 },
+      };
+      //If failed for 3 times, lock the account for 12 hours
+      if (user.numberOfFailedLogins >= 2) {
+        updateDoc = {
+          ...updateDoc,
+          lockedTill: new Date() + 12 * 60 * 60 * 1000,
+        };
+      }
+      const updateUser = await User.findByIdAndUpdate(userId, updateDoc);
+      return res.status(400).json({ message: "INCORRECT_OTP_ERR" });
+    }
+
+    if (user.tokenExpires < Date.now()) {
+      return res.status(400).json({ message: "token Expired" });
+    }
+    //Generate Tokens
+    const tokens = await generateAuthTokens(user);
+    user.phoneOtp = "";
+    user.isMobileVerified = true;
+    user.tokenExpires = "";
+    await user.save();
+
+    res.status(201).json({
+      type: "success",
+      message: "OTP verified successfully",
+      data: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        userId: user._id,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json(error);
+  }
+};
+
+module.exports.resendPhoneOtp = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(400).json({ message: "USER_NOT_FOUND_ERR" });
+    }
+    //If user is exist and is blocked
+    if (user && user.isBlocked) {
+      return res.status(400).json({
+        type: "Error",
+        message: "User account is locked, contact call center",
+      });
+    }
+    //TO DO: If user is exist and numberOfFailedLogins exceeds 3 in last 12 hours, block the user
+    if (
+      user &&
+      user.numberOfFailedLogins >= 3 &&
+      user.lockedTill > Date.now()
+    ) {
+      return res.status(400).json({
+        type: "Error",
+        message: "User account is locked, try after some time",
+      });
+    }
+
+    /*  if (user.tokenExpires < Date.now()-30 * 60 * 1000) {
+      return res.status(400).json({ message: "token Expired" });
+    } */
+    // Generate and Send OTP user's mobile number
+    const otp = generateOTP(6);
+    // save otp to user collection
+    user.phoneOtp = otp;
+    user.tokenExpires = Date.now() + 5 * 60 * 1000; //5 mins
+    await user.save();
+    // send otp to phone number
+    await sendOTP({
+      message: `Your OTP is ${otp}`,
+      contactNumber: user.mobile,
+    });
+    return res.status(200).json({
+      type: "Success",
+      message: "OTP sent to mobile number",
+      otp,
+    });
+  } catch (error) {
+    return res.status(500).json(error);
   }
 };
 
@@ -417,7 +492,7 @@ module.exports.forgotPassword = async (req, res) => {
       findUser._id,
       {
         passwordResetToken: resetPasswordToken,
-        passwordResetExpires: Date.now() + 5 * 60 * 1000, //5 mins
+        tokenExpires: Date.now() + 5 * 60 * 1000, //5 mins
       },
       { new: true }
     );
@@ -454,7 +529,7 @@ module.exports.resetPassword = async (req, res) => {
     //const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
     const user = await User.findOne({
       passwordResetToken: resetPasswordToken,
-      passwordResetExpires: { $gt: Date.now() },
+      tokenExpires: { $gt: Date.now() },
     });
     console.log("xxx" + resetPasswordToken);
     if (!user) {
@@ -466,7 +541,7 @@ module.exports.resetPassword = async (req, res) => {
     const hash_password = await bcrypt.hash(password, 10);
     user.hash_password = hash_password;
     user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
+    user.tokenExpires = undefined;
     await user.save();
     //TO DO:Sending after reset password mail
     return res.status(200).json({
@@ -540,6 +615,153 @@ module.exports.deleteUserById = (req, res) => {
   });
 };
 
+module.exports.verifyPhoneOtp5 = async (req, res, next) => {
+  try {
+    const { otp, userId } = req.body;
+    const user = await User.findById(userId);
+    if (!user) {
+      next({ status: 400, message: USER_NOT_FOUND_ERR });
+      return;
+    }
+
+    if (user.phoneOtp !== otp) {
+      next({ status: 400, message: INCORRECT_OTP_ERR });
+      return;
+    }
+    const token = createJwtToken({ userId: user._id });
+
+    user.phoneOtp = "";
+    await user.save();
+
+    res.status(201).json({
+      type: "success",
+      message: "OTP verified successfully",
+      data: {
+        token,
+        userId: user._id,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports.register5 = (req, res) => {
+  try {
+    User.findOne({ mobile: req.body.mobile }).exec(async (error, user) => {
+      //In case of any error in searching user send error.
+      if (error)
+        return res.status(400).json({
+          type: "Error",
+          message: "Something went wrong",
+        });
+      //If user is already exist send error
+      if (user) {
+        return res.status(401).json({
+          type: "Error",
+          message: "User is already registered",
+        });
+      }
+      //If user is not exist, create user
+      else {
+        const { email, mobile, password, referralCode, referredBy } = req.body;
+        const hash_password = await bcrypt.hash(password, 10);
+        const _user = await User.create({
+          email,
+          mobile,
+          referralCode,
+          referredBy,
+          hash_password,
+          username: shortid.generate(),
+        });
+        _user.hash_password = undefined;
+
+        const tokens = await generateAuthTokens(_user);
+        return res.status(201).json({
+          type: "Success",
+          message: "User created successfully",
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          user: _user,
+          expireTime: Date.now() + 60 * 60 * 1000,
+        });
+        /* const _user = new User({
+        email,
+        mobile,
+        referralCode,
+        referredBy,
+        hash_password,
+        username: shortid.generate(),
+      });
+      _user.save((error, data) => {
+        //send error in case of any error in user creation.
+        if (error) {
+          return res.status(400).json({
+            type: "Error",
+            message: "Something went wrong " + error,
+          });
+        }
+
+        if (data) {
+          console.log("test3");
+          const token = jwt.sign(
+            { _id: data._id, role: data.role },
+            process.env.JWT_SECRET,
+            { expiresIn: "3h" }
+          );
+          const refreshtoken = jwt.sign(
+            { _id: data._id, role: data.role },
+            process.env.REFRESH_TOKEN_SECRET,
+            { expiresIn: "3w" }
+          );
+          const {
+            _id,
+            firstName,
+            lastName,
+            email,
+            role,
+            profilePicture,
+            mobile,
+            username,
+            isMobileVerified,
+            referralCode,
+            referredBy,
+            isBlocked,
+            balance,
+          } = data;
+          return res.status(201).json({
+            type: "Success",
+            message: "User created successfully",
+            token,
+            refreshtoken,
+            user: {
+              _id,
+              firstName,
+              lastName,
+              email,
+              role,
+              username,
+              mobile,
+              profilePicture,
+              isMobileVerified,
+              referralCode,
+              referredBy,
+              isBlocked,
+              balance,
+            },
+            expireTime: Date.now() + 60 * 60 * 1000,
+          });
+        }
+      });*/
+      }
+    });
+  } catch (error) {
+    return res.status(400).json({
+      type: "Error",
+      message: "Something went wrong",
+    });
+  }
+};
 /*
 module.exports.login5 = (req, res) => {
   User.findOne({ mobile: req.body.mobile }).exec((error, user) => {

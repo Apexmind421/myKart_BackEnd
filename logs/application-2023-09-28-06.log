@@ -1,0 +1,22 @@
+info:  Sep-28-2023 06:00:05: 	MongoDB Server connected
+info:  Sep-28-2023 06:01:30: 	MongoDB Server connected
+info:  Sep-28-2023 06:05:55: 	MongoDB Server connected
+info:  Sep-28-2023 06:12:33: 	MongoDB Server connected
+info:  Sep-28-2023 06:13:37: 	MongoDB Server connected
+info:  Sep-28-2023 06:14:02: 	MongoDB Server connected
+error:  Sep-28-2023 06:14:21: 	truePOST /api/register 400 - 320.974 ms - message: -
+error:  Sep-28-2023 06:15:44: 	truePOST /api/register 400 - 1435.686 ms - message: -
+info:  Sep-28-2023 06:16:49: 	MongoDB Server connected
+error:  Sep-28-2023 06:16:54: 	truePOST /api/register 400 - 1801.359 ms - message: -
+error:  Sep-28-2023 06:17:10: 	truePOST /api/register 400 - 1414.673 ms - message: -
+info:  Sep-28-2023 06:17:44: 	MongoDB Server connected
+error:  Sep-28-2023 06:18:08: 	truePOST /api/register 400 - 1579.127 ms - message: -
+info:  Sep-28-2023 06:19:53: 	MongoDB Server connected
+info:  Sep-28-2023 06:20:07: 	MongoDB Server connected
+info:  Sep-28-2023 06:20:25: 	truePOST /api/register 201 - 1460.339 ms
+info:  Sep-28-2023 06:21:48: 	MongoDB Server connected
+info:  Sep-28-2023 06:28:12: 	MongoDB Server connected
+error:  Sep-28-2023 06:30:30: 	truePOST /api/user/verify 400 - 556.810 ms - message: -
+error:  Sep-28-2023 06:50:02: 	truePOST /api/register 400 - 3129.289 ms - message: -
+info:  Sep-28-2023 06:50:18: 	truePOST /api/register 201 - 1505.200 ms
+info:  Sep-28-2023 06:51:40: 	truePOST /api/user/verify 201 - 1184.726 ms

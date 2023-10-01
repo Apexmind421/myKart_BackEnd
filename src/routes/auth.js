@@ -4,6 +4,8 @@ const User = require("../models/user");
 const {
   register,
   loginUser,
+  verifyPhoneOtp,
+  resendPhoneOtp,
   logout,
   user_edit,
   deleteUserById,
@@ -42,6 +44,8 @@ const upload = multer({
 });
 router.post("/login", validateLoginRequest, isRequestValidated, loginUser);
 router.post("/register", validateRegisterRequest, isRequestValidated, register);
+router.post("/user/verify", verifyPhoneOtp);
+router.post("/user/resend-otp", resendPhoneOtp);
 router.post("/refresh-token", handleRefreshToken);
 router.post("/user/logout", logout);
 router.patch("/user/info", requireLogin, user_edit);
