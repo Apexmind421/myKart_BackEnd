@@ -64,6 +64,8 @@ mongoose
 //To parse JSON on response in Post. Acts as mediator
 app.use(cors());
 app.use(express.json());
+//TO DO: This is added just for render deployment
+app.set("trust proxy", 1);
 // Use Helmet!
 app.use(helmet());
 // Apply the rate limiting middleware to API calls only

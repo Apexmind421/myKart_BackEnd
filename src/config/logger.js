@@ -23,8 +23,8 @@ const transport = new winston.transports.DailyRotateFile({
 });
 transport.on("rotate", function (oldFilename, newFilename) {
   // TO DO: call function like upload to s3 or on cloud
-  Console.log("oldFilename " + oldFilename);
-  Console.log("newFilename " + newFilename);
+  // Console.log("oldFilename " + oldFilename);
+  // Console.log("newFilename " + newFilename);
 });
 
 const logger = winston.createLogger({

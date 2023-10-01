@@ -1,7 +1,0 @@
-info:  Sep-28-2023 08:14:12: 	MongoDB Server connected
-info:  Sep-28-2023 08:15:03: 	MongoDB Server connected
-info:  Sep-28-2023 08:18:32: 	truePOST /api/login 200 - 1075.781 ms
-info:  Sep-28-2023 08:18:47: 	trueGET /api/getAllSettings 201 - 541.258 ms
-info:  Sep-28-2023 08:18:59: 	trueGET /api/getSettingById?id=651407bf7d3123cad617c483 201 - 416.894 ms
-info:  Sep-28-2023 08:19:26: 	trueGET /api/category/fetch 200 - 494.871 ms
-info:  Sep-28-2023 08:23:52: 	MongoDB Server connected
