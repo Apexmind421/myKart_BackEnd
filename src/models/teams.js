@@ -7,9 +7,13 @@ const teamSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    product: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+    },
     type: {
       type: String,
-      enum: ["Buy", "View", "Register"],
+      enum: ["Buy", "View", "Register", "Slash"],
       required: true,
     },
     totalRequired: {
@@ -18,6 +22,12 @@ const teamSchema = new mongoose.Schema(
     currentRequired: {
       type: Number,
     },
+    members: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
     status: {
       type: String,
       enum: ["Open", "Closed", "Cancelled"],

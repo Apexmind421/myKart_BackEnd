@@ -3,11 +3,17 @@ const router = express.Router();
 const User = require("../models/user");
 const {
   register,
-  login,
+  loginUser,
+  verifyPhoneOtp,
+  resendPhoneOtp,
+  logout,
   user_edit,
   deleteUserById,
-  refreshToken,
+  handleRefreshToken,
   user_photoUpload,
+  forgotPassword,
+  updatePassword,
+  resetPassword,
 } = require("../controller/auth");
 const { getUserReviews } = require("../controller/reviews");
 const {
@@ -36,11 +42,16 @@ const upload = multer({
     }
   },
 });
-router.get("/user/reviews", requireLogin, getUserReviews);
-router.post("/login", validateLoginRequest, isRequestValidated, login);
+router.post("/login", validateLoginRequest, isRequestValidated, loginUser);
 router.post("/register", validateRegisterRequest, isRequestValidated, register);
-router.post("/refresh-token", refreshToken);
+router.post("/user/verify", verifyPhoneOtp);
+router.post("/user/resend-otp", resendPhoneOtp);
+router.post("/refresh-token", handleRefreshToken);
+router.post("/user/logout", logout);
 router.patch("/user/info", requireLogin, user_edit);
+router.post("/user/forgot-password", forgotPassword);
+router.post("/user/reset-password", resetPassword);
+router.post("/user/update-password", requireLogin, updatePassword);
 router.patch(
   "/user/photo",
   requireLogin,
@@ -49,9 +60,10 @@ router.patch(
 );
 //Delete User
 router.delete("/user", requireLogin, deleteUserById);
+//User Reviews
+router.get("/user/reviews", requireLogin, getUserReviews);
 
 //TO DO::
-//Log out
 //Reset password
 //Forgot password
 //Send verfication code

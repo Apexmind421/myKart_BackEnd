@@ -169,6 +169,9 @@ module.exports.user_edit = (req, res) => {
         if (req.body.isBlocked) {
           user.isBlocked = req.body.isBlocked;
         }
+        if (req.body.isMobileVerified) {
+          user.isMobileVerified = req.body.isMobileVerified;
+        }
         if (req.body.email) {
           user.email = req.body.email;
         }
@@ -178,10 +181,13 @@ module.exports.user_edit = (req, res) => {
         if (req.body.lastName) {
           user.lastName = req.body.lastName;
         }
+        if (req.body.wiseCoins) {
+          user.wiseCoins = req.body.wiseCoins;
+        }
         user.save((err, _user) => {
           if (err) {
             return res.status(400).json({
-              message: "Something went wrong",
+              message: "Something went wrong " + err.message,
             });
           }
 
@@ -194,7 +200,9 @@ module.exports.user_edit = (req, res) => {
               role,
               profilePicture,
               mobile,
+              isBlocked,
               username,
+              wiseCoins,
               isMobileVerified,
             } = _user;
             return res.status(200).json({
@@ -205,7 +213,9 @@ module.exports.user_edit = (req, res) => {
                 email,
                 role,
                 username,
+                wiseCoins,
                 mobile,
+                isBlocked,
                 profilePicture,
                 isMobileVerified,
               },

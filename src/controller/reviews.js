@@ -15,7 +15,6 @@ const parser = new DatauriParser();
 const { uploader } = require("../config/cloudinary.config");
 const { cloudinaryUploadImg } = require("../utils/cloudinary");
 const fs = require("fs");
-const validateMongoDbId = require("../Validators/validateMongodbId");
 
 exports.addProductReview = async (req, res) => {
   try {
@@ -267,7 +266,7 @@ exports.getProductReviews = (req, res) => {
   const skip = req.query.page ? (req.query.page - 1) * 5 : 0;
   const limit = req.query.limit ? parseInt(req.query.limit) : 5;
   if (productId) {
-    Product.findOne({ _id: productId }).exec((error, product) => {
+    Product.findById(productId).exec((error, product) => {
       console.log("Reviews 1 are ******************" + JSON.stringify(product));
 
       if (error)

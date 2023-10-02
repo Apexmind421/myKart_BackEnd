@@ -45,13 +45,13 @@ exports.addAddress1 = (req, res) => {
   if (req.body.address) {
     if (addressId) {
       const addressObj = /*defaultAddressId
-        ? {
-            defaultAddress: defaultAddressId,
-            $set: {
-              "address.$": req.body.address,
-            },
-          }
-        : */ {
+      ? {
+          defaultAddress: defaultAddressId,
+          $set: {
+            "address.$": req.body.address,
+          },
+        }
+      : */ {
         $set: {
           "address.$": req.body.address,
         },
@@ -99,18 +99,17 @@ exports.addAddress1 = (req, res) => {
 };
 
 exports.getAddress = (req, res) => {
-  console.log("I am here inside getAddress");
   const excludeFields = { _id: 0, user: 0, __v: 0, createdAt: 0, updatedAt: 0 };
   UserAddress.findOne({ user: req.user._id }, excludeFields)
     /*  .populate("address.zipCode")
-    .exec((error, userAddress) => {
-      if (error) return res.status(400).json({ error });
-      if (userAddress) {
-        return res.status(200).json({ userAddresses: userAddress });
-      } else {
-        return res.status(200).json({ userAddresses: [] });
-      }
-    });*/
+  .exec((error, userAddress) => {
+    if (error) return res.status(400).json({ error });
+    if (userAddress) {
+      return res.status(200).json({ userAddresses: userAddress });
+    } else {
+      return res.status(200).json({ userAddresses: [] });
+    }
+  });*/
     //  .populate("address.zipCode")
     .populate({
       path: "address.zipCode",
@@ -147,7 +146,25 @@ exports.deleteAddress = (req, res) => {
       .exec((error, result) => {
         if (error) return res.status(400).json({ error });
         if (result) {
-          res.status(202).json({ result });
+          if (result.defaultAddress == UserAddressID) {
+            console.log("I am here001");
+            UserAddress.findOneAndUpdate(
+              { user: req.user._id },
+              {
+                defaultAddress: null,
+              },
+              { new: true }
+            ).exec((error1, result1) => {
+              if (error1) return res.status(400).json({ error: error1 });
+              if (result1) {
+                console.log("I am here002");
+                return res.status(202).json({ result1 });
+              }
+            });
+          } else {
+            console.log("I am here003");
+            return res.status(202).json({ result });
+          }
         }
       });
   }
@@ -202,21 +219,49 @@ exports.addZipCodes = (req, res) => {
     return res.status(400).json({ message: "Please provide zipCode" });
   }
 };
-
+/*
 exports.setDefaultAddress = (req, res) => {
-  const defaultAddressId = req.query.addressId;
-  if (defaultAddressId) {
-    const setDefaultAddress = UserAddress.findOneAndUpdate(
-      {
-        user: req.user._id,
-      },
-      {
-        $set: { defaultAddress: defaultAddressId },
-      }
-    );
+const defaultAddressId = req.query.addressId;
 
-    return res.status(202).json({ result: "updated default address" });
-  } else {
-    res.status(400).json({ error: "Params required" });
+if (defaultAddressId) {
+  const setDefaultAddress = UserAddress.findOneAndUpdate(
+    {
+      user: req.user._id,
+    },
+    {
+      defaultAddress: defaultAddressId,
+    },
+    {
+      upsert: true,
+    }
+  );
+
+  return res.status(202).json({ result: "updated default address" });
+} else {
+  res.status(400).json({ error: "Params required" });
+}
+};
+*/
+exports.setDefaultAddress = (req, res) => {
+  try {
+    const defaultAddressId = req.query.addressId;
+    if (defaultAddressId) {
+      const addressObj = {
+        defaultAddress: defaultAddressId,
+      };
+      UserAddress.findOneAndUpdate({ user: req.user._id }, addressObj, {
+        new: true,
+        upsert: true,
+      }).exec((error, userAddress) => {
+        if (error) return res.status(400).json({ error });
+        if (userAddress) {
+          res.status(201).json({ message: "updated default address" });
+        }
+      });
+    } else {
+      return res.status(400).json({ message: "Missing input" });
+    }
+  } catch (error) {
+    return res.status(400).json({ message: error.message });
   }
 };

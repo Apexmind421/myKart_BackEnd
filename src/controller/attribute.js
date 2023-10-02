@@ -5,7 +5,7 @@ exports.addAttribute = (req, res) => {
     Attribute.findOne(req.body.attributes).exec((error, attribute) => {
       if (error)
         return res.status(400).json({
-          message: "Product Option is not registered",
+          message: "Smoething went wrong",
         });
       if (attribute) {
         return res.status(401).json({
@@ -49,34 +49,15 @@ exports.fetchAttribute = (req, res) => {
     });
 };
 exports.deleteAttribute = (req, res) => {
-  if (req.body.attributes) {
-    Attribute.findOne(req.body.attributes).exec((error, attribute) => {
-      if (error)
-        return res.status(400).json({
-          message: "Product Option is not registered",
-        });
-      if (attribute) {
-        return res.status(401).json({
-          message: "Attribute is already registered",
-        });
-      } else {
-        const _attribute = new Attribute(req.body.attributes);
-        _attribute.save((err, data) => {
-          //console.log("Data is " + JSON.stringify(data));
-          if (err) {
-            //  console.log("Error is " + JSON.stringify(err));
-            return res.status(400).json({
-              message: "Something went wrong",
-              err,
-            });
-          }
-          if (data) {
-            return res
-              .status(201)
-              .json({ data, message: "Attribute created successfully" });
-          }
-        });
+  const optionId = req.query.id;
+  if (optionId) {
+    Attribute.deleteOne({ _id: optionId }).exec((error, result) => {
+      if (error) return res.status(400).json({ error });
+      if (result) {
+        res.status(202).json({ result });
       }
     });
+  } else {
+    res.status(400).json({ error: "Params required" });
   }
 };

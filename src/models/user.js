@@ -27,16 +27,19 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
       trim: true,
       unique: true,
       index: true,
       lowercase: true,
+      required: [true, "Please provide an email"],
     },
     mobile: {
       type: Number,
-      required: true,
+      required: [true, "Please provide mobile number"],
       unique: true,
+    },
+    phoneOtp: {
+      type: String,
     },
     hash_password: {
       type: String,
@@ -44,9 +47,14 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["user", "admin", "seller"],
+      enum: ["user", "admin"],
       default: "user",
     },
+    isSeller: {
+      type: Boolean,
+      default: false,
+    },
+    seller_info: { type: mongoose.Schema.Types.ObjectId, ref: "Seller" },
     isEmailVerified: {
       type: Boolean,
       default: false,
@@ -68,18 +76,23 @@ const userSchema = new mongoose.Schema(
       type: Array,
       //    required: true,
     },
-    referral_code: {
+    referralCode: {
       type: String,
     },
-    referred_by: { type: String },
+    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     isBlocked: {
       type: Boolean,
       default: false,
     },
-    balance: { type: Number, default: 0.0 },
+    wiseCoins: { type: Number, default: 10 },
+    refreshToken: {
+      type: String,
+    },
     passwordChangedAt: Date,
     passwordResetToken: String,
-    passwordResetExpires: Date,
+    tokenExpires: Date,
+    numberOfFailedLogins: { type: Number, default: 0 },
+    lockedTill: { type: Date },
   },
   { timestamps: true }
 );
@@ -104,7 +117,10 @@ userSchema.statics.isMobileTaken = async function (mobile, excludeUserId) {
   return !!user;
 };
 
+<<<<<<< HEAD
 userSchema.index({mobile:1});
+=======
+>>>>>>> 0e6d0d7335965287548097898dcd31cfb4aa8944
 // Set passwordChangedAt field to the current time when the user change the password
 userSchema.pre("save", function (next) {
   if (!this.isModified("password") || this.isNew) return next();

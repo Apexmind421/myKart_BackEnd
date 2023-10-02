@@ -36,7 +36,7 @@ const {
   getProductReviews,
   deleteProductReviews,
 } = require("../controller/reviews");
-const { requireLogin } = require("../Validators/validation");
+const { requireLogin, middleware } = require("../Validators/validation");
 const shortid = require("shortid");
 const multer = require("multer");
 const path = require("path");
@@ -72,25 +72,11 @@ const upload = multer({
 
 /*const upload = multer({ storage });*/
 
-/////////////////Attribute Routes
-router.post("/attribute/add", requireLogin, addAttributes);
-router.get("/attribute", fetchAttributes);
-router.delete("/attribute", requireLogin, deleteAttributes);
-
-//Add Variant to Product--Done
-//Remove Variant to Product
-//Update the Product Varaint
-//Fetch Varinat of the Product
-router.post("/product/variant/add", requireLogin, addProductVariant); //AddProductVariant
-router.get("/product/variant/", fetchProductVariants);
-router.delete("/product/variant/", deleteProductVariant);
-//router.get("/product/variantOption", fetchProductVariantOptions);
-router.put("/product/variant", requireLogin, updateProductVariant);
-
 ////////////////Product Routes
 router.post(
   "/product/add",
   requireLogin,
+  middleware,
   upload.array("productImages", 8),
   addProduct
 );
@@ -101,6 +87,12 @@ router.put(
   updateProduct
 );
 router.delete("/product/deleteProductById", requireLogin, deleteProductById);
+
+/////////////////Product Variant Routes
+router.post("/product/variant/add", requireLogin, addProductVariant); //AddProductVariant
+router.get("/product/variant/", fetchProductVariants);
+router.delete("/product/variant/", deleteProductVariant);
+router.put("/product/variant", requireLogin, updateProductVariant);
 
 /////////////////Product Detail Routes
 router.post("/product/tag/add", requireLogin, addProductTags); //AddProductTag
@@ -117,18 +109,6 @@ router.post(
   addImagesToProduct
 );
 
-/////////////////Product Search Routes
-router.get("/product/fetch1", fetchProducts);
-router.post("/product/getFilteredProducts", getProducts);
-router.post("/product/getProductFilters", getProductFilters);
-router.post("/product/fetch", getProducts1);
-router.post("/product/fetch2", getProducts2);
-//TO DO: router.get("/product/fetchTags", fetchTags);
-router.get("/product/details", requireLogin, fetchProductDetails);
-router.get("/products/:slug", fetchProductsBySlug);
-router.get("/product/details/:productId", fetchProductDetailsById);
-router.get("/product/fetchCartProductDetails", fetchCartProductDetails);
-
 ////////////////////////////Product Reviews
 router.post(
   "/product/review",
@@ -138,6 +118,17 @@ router.post(
 );
 router.get("/product/review", getProductReviews);
 router.delete("/product/review", requireLogin, deleteProductReviews);
+
+/////////////////Product Search Routes
+router.get("/product/fetch1", fetchProducts);
+router.post("/product/getFilteredProducts", getProducts);
+router.post("/product/getProductFilters", getProductFilters);
+router.post("/product/fetch", getProducts1);
+router.post("/product/fetch2", getProducts2);
+router.get("/product/details", requireLogin, fetchProductDetails);
+router.get("/products/:slug", fetchProductsBySlug);
+router.get("/product/details/:productId", fetchProductDetailsById);
+router.get("/product/fetchCartProductDetails", fetchCartProductDetails);
 
 module.exports = router;
 
@@ -157,3 +148,5 @@ router.post(
 
 //router.get('/product/getFilteredProducts',getProducts);
 //router.get('/product/fetchcategories',fetchCategories);
+
+//TO DO: router.get("/product/fetchTags", fetchTags);
