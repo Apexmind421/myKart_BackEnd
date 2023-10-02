@@ -8,29 +8,9 @@ const path = require("path");
 const { notFound, errorHandler } = require("./middlewares/errorHandler");
 const { rateLimit } = require("express-rate-limit");
 const helmet = require("helmet");
+const mongoSanitize = require("express-mongo-sanitize");
+const router = require("./routes");
 
-//routes
-const authRoutes = require("./routes/auth");
-const adminAuthRoutes = require("./routes/admin/auth");
-const catRoutes = require("./routes/category");
-const productRoutes = require("./routes/product");
-//onst productAdminRoutes = require("./routes/admin/product");
-const historyRoutes = require("./routes/productViews");
-const cartRoutes = require("./routes/cart");
-const favoriteRoutes = require("./routes/favorite");
-const pageRoutes = require("./routes/admin/page");
-const addressRoutes = require("./routes/address");
-const initialDataRoutes = require("./routes/admin/initialData");
-const orderRoutes = require("./routes/order");
-const returnRequestRoutes = require("./routes/returnRequest");
-const questionRoutes = require("./routes/questions");
-const supportRoutes = require("./routes/tickets");
-const flashSaleRoutes = require("./routes/flashSale");
-const couponRoutes = require("./routes/coupon");
-const attributeRoutes = require("./routes/attribute");
-const dealRoutes = require("./routes/deals");
-const teamRoutes = require("./routes/teams");
-const settingsRoutes = require("./routes/settings");
 const { cloudinaryConfig } = require("./config/cloudinary.config");
 const cors = require("cors");
 
@@ -70,31 +50,16 @@ app.set("trust proxy", 1);
 app.use(helmet());
 // Apply the rate limiting middleware to API calls only
 app.use("/api", apiLimiter);
+
+// MongoDB data sanitization
+app.use(mongoSanitize());
+
 //app.use(morgan("dev"));
 app.use(successMorganHandler);
 app.use(errorMorganHandler);
 app.use("*", cloudinaryConfig);
 app.use("/public", express.static(path.join(__dirname, "/uploads/")));
-app.use("/api", authRoutes);
-app.use("/api", adminAuthRoutes);
-app.use("/api", catRoutes);
-app.use("/api", productRoutes);
-app.use("/api", dealRoutes);
-app.use("/api", cartRoutes);
-app.use("/api", attributeRoutes);
-app.use("/api", pageRoutes);
-app.use("/api", addressRoutes);
-app.use("/api", initialDataRoutes);
-app.use("/api", orderRoutes);
-app.use("/api", returnRequestRoutes);
-app.use("/api", questionRoutes); //Added Questions Route
-app.use("/api", flashSaleRoutes);
-app.use("/api", favoriteRoutes);
-app.use("/api", couponRoutes);
-app.use("/api", teamRoutes);
-app.use("/api", settingsRoutes);
-app.use("/api", historyRoutes);
-app.use("/api", supportRoutes);
+app.use("/api", router);
 app.use(notFound);
 app.use(errorHandler);
 // Listen to port in environment file

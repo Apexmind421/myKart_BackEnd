@@ -117,10 +117,7 @@ userSchema.statics.isMobileTaken = async function (mobile, excludeUserId) {
   return !!user;
 };
 
-<<<<<<< HEAD
-userSchema.index({mobile:1});
-=======
->>>>>>> 0e6d0d7335965287548097898dcd31cfb4aa8944
+userSchema.index({ mobile: 1 });
 // Set passwordChangedAt field to the current time when the user change the password
 userSchema.pre("save", function (next) {
   if (!this.isModified("password") || this.isNew) return next();

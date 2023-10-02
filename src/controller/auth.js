@@ -118,13 +118,9 @@ module.exports.loginUser = async (req, res) => {
       }
       const token = await generateAuthTokens(findUser?._id);
       const refreshToken = await generateRefreshToken(findUser?._id);
-      const updateuser = await User.findByIdAndUpdate(
-        findUser._id,
-        {
-          refreshToken: refreshToken,
-        },
-        { new: true }
-      );
+      const updateuser = await User.findByIdAndUpdate(findUser._id, {
+        refreshToken: refreshToken,
+      });
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
         maxAge: 72 * 60 * 60 * 1000,
@@ -402,7 +398,7 @@ module.exports.user_photoUpload = async (req, res) => {
     const uploadResult = await uploader.upload(prodFile.content);
     userProfileImage = uploadResult.secure_url;
     if (userProfileImage) {
-      User.findById( req.user._id ).exec((error, user) => {
+      User.findById(req.user._id).exec((error, user) => {
         if (error) return res.status(400).json({ error });
         if (user) {
           user.profilePicture = userProfileImage;
