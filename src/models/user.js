@@ -23,7 +23,6 @@ const userSchema = new mongoose.Schema(
       required: true,
       trim: true,
       unique: true,
-      index: true,
       lowercase: true,
     },
     email: {
@@ -31,6 +30,7 @@ const userSchema = new mongoose.Schema(
       required: true,
       trim: true,
       unique: true,
+      index: true,
       lowercase: true,
     },
     mobile: {
@@ -93,6 +93,31 @@ userSchema.virtual("fullName").get(function (pwd) {
   return `${this.firstName}${this.lastName}`;
 });
 
+/**
+ * Check if mobile is taken
+ * @param {string} mobile - The user's mobile
+ * @param {ObjectId} [excludeUserId] - The id of the user to be excluded
+ * @returns {Promise<boolean>}
+ */
+userSchema.statics.isMobileTaken = async function (mobile, excludeUserId) {
+  const user = await this.findOne({ mobile, _id: { $ne: excludeUserId } });
+  return !!user;
+};
+
+userSchema.index({mobile:1});
+// Set passwordChangedAt field to the current time when the user change the password
+userSchema.pre("save", function (next) {
+  if (!this.isModified("password") || this.isNew) return next();
+
+  this.passwordChangedAt = Date.now() - 1000;
+  next();
+});
+
+/**
+ * Check if password matches the user's password
+ * @param {string} password
+ * @returns {Promise<boolean>}
+ */
 userSchema.methods = {
   authenticate: function (password) {
     return bcrypt.compareSync(password, this.hash_password);
