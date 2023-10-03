@@ -38,19 +38,19 @@ exports.getTeams = async (req, res) => {
     const teams = Teams.find(filter);
     if (teams) {
       return res.status(200).json({
-        type: "success",
+       success:true,
         mesage: "Fetched teams successfully",
         result: teams,
       });
     } else {
       return res
         .status(404)
-        .json({ type: "error", mesage: "No Teams available" });
+        .json({ success:false, mesage: "No Teams available" });
     }
   } catch (error) {
     console.log("Catch Error for getTeams is::: " + error.message);
     return res
       .status(500)
-      .json({ type: "error", mesage: "Something went wrong" });
+      .json({ success:false, mesage: "Something went wrong" });
   }
 };

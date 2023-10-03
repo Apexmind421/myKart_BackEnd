@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const {
   addCategory,
-  fetchCategory,
+  // fetchCategory,
   fetchCategories,
   deleteCategories,
   modifyCategories,
@@ -58,8 +58,8 @@ router.post(
   //upload.array("categoryImage"),
   addCategory
 );
-router.get("/category/fetch", fetchCategory);
-router.get("/category/fetchcategories", fetchCategories);
+//router.get("/category/fetch", fetchCategory);
+router.get("/category/fetch", fetchCategories);
 router.post(
   "/category/modify",
   requireLogin,

@@ -11,7 +11,6 @@ const categoryScehma = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      index: true,
       lowercase: true,
     },
     type: {
@@ -21,6 +20,8 @@ const categoryScehma = new mongoose.Schema(
     banner: { type: String },
     parentId: {
       type: String,
+
+      index: true,
     },
     status: {
       type: Boolean,
@@ -33,5 +34,5 @@ const categoryScehma = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+//Create index on parentId
 module.exports = mongoose.model("Category", categoryScehma);

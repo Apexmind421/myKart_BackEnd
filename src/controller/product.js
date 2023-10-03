@@ -1048,7 +1048,7 @@ exports.fetchProductDetails = async (req, res) => {
   } catch (err) {
     return res
       .status(500)
-      .json({ type: "Error", message: "Something went wrong" });
+      .json({ success:false, message: "Something went wrong" });
   }
 };
 exports.fetchProductDetails5 = async (req, res) => {

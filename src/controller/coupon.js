@@ -24,13 +24,13 @@ exports.addCouponCode = async (req, res) => {
     if (validCoupon != null) {
       return res
         .status(400)
-        .json({ type: "Error", message: "Coupon code already exist" });
+        .json({ success: false, message: "Coupon code already exist" });
     }
 
     if (isPercent) {
       if (discount > 100) {
         return res.status(400).json({
-          type: "Error",
+          success: false,
           message:
             "Coupon discount should not be more than 100 for percentage discount type",
         });
@@ -54,27 +54,33 @@ exports.addCouponCode = async (req, res) => {
     }
 
     const coupon = await Coupon.create(couponObj);
-    return res
-      .status(201)
-      .json({ type: "Success", message: "Coupon has been created", coupon });
+    return res.status(201).json({
+      success: true,
+      message: "Coupon has been created",
+      data: coupon,
+    });
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
   }
 };
 
 exports.updateCouponCode = async (req, res) => {
   try {
     const { id } = req.query;
-
+    /*
     //Check if coupon is already exist.
-    const validCoupon = await Coupon.findById({
-      id,
-    });
+    const validCoupon = await Coupon.findById(id);
 
-    if (validCoupon === null) {
-      return res.status(400).json({ type: "Error", message: "Invalid Coupon" });
+    if (validCoupon === null || !validCoupon) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid Coupon" });
     }
-
+    */
     const {
       type,
       isActive,
@@ -105,12 +111,12 @@ exports.updateCouponCode = async (req, res) => {
       couponObj.max_discount = max_discount;
     }
 
-    const coupon = await Coupon.findByIdAndUpdate(id, couponObj, {
-      new: true,
+    const coupon = await Coupon.findByIdAndUpdate(id, couponObj, { new: true });
+    return res.status(201).json({
+      success: true,
+      message: "Coupon has been updated",
+      data: coupon,
     });
-    return res
-      .status(201)
-      .json({ type: "Success", message: "Coupon has been updated", coupon });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
@@ -125,40 +131,70 @@ exports.fetchCouponCode = (req, res) => {
   }).exec((err, result) => {
     if (err)
       return res.status(500).send({
-        type: "Error",
+        success: false,
         message: "Something went wrong",
         error: err.message,
       });
     if (result)
       return res
         .status(200)
-        .send({ type: "Success", message: "Coupon has been fetched", result });
+        .send({ success: true, message: "Coupon has been fetched", result });
     else
-      return res.status(400).send({ type: "Error", message: "Invalid Coupon" });
+      return res
+        .status(400)
+        .send({ success: false, message: "Invalid Coupon" });
   });
 };
 
-exports.fetchAllCouponCodes = (req, res) => {
-  Coupon.find().exec((err, result) => {
-    if (err) return res.status(400).send(err);
-    return res.status(200).send(result);
-  });
+exports.fetchAllCouponCodes = async (req, res) => {
+  try {
+    const result = await Coupon.find();
+    if (result) {
+      return res.status(200).json({
+        success: true,
+        message: "fetched all coupons",
+        data: result,
+      });
+    } else {
+      return res
+        .status(204)
+        .json({ success: true, message: "No result found", data: [] });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
+  }
 };
 
-exports.deleteCouponCode = (req, res) => {
+exports.deleteCouponCode = async (req, res) => {
   try {
     const { id } = req.params;
     //validateMongoDbId(id);
-    Coupon.findOneAndDelete({ _id: id }).exec((error, coupon) => {
-      if (error) return res.status(400).json({ error });
-      if (coupon) {
-        res.status(202).json({ message: "Coupon removed" });
+    if (id) {
+      const result = await Coupon.findByIdAndDelete(id);
+
+      if (result) {
+        return res
+          .status(202)
+          .json({ success: true, message: "Coupon removed" });
       } else {
-        res.status(400).json({ message: "Could not remove the Coupon" });
+        return res.status(400).json({
+          success: false,
+          message: "Could not remove the Coupon",
+        });
       }
+    } else {
+      return res.status(400).json({ success: false, message: "Missing input" });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
     });
-  } catch (err) {
-    return res.status(400).json({ message: err.message });
   }
 };
 exports.deleteAllCouponCodes = (req, res) => {

@@ -3,22 +3,30 @@ const Product = require("../models/product");
 const ProductVariant = require("../models/productVariant");
 //const validateMongoDbId = require("../Validators/validateMongodbId");
 const Coupon = require("../models/coupon");
-
-exports.userCart = async (req, res) => {
-  /* 
+/* 
   1. Check if the cart is exist, if exist delete the old one.
   2. Set cart items. ie. to fetch the product details like quanity and price
   3. Validate if the quanity exists
   4. Check if reference ID exisits, if yes, update the cart
   5. Check if team buy. if yes, save team ID(if exist), needToView, needToBuy, discountedPrice*/
-  //if team buy is true, take originalprice and discountprice,
-  //or else take only originalprice
+//if team buy is true, take originalprice and discountprice,
+//or else take only originalprice
+exports.userCart = async (req, res) => {
   const { cart } = req.body;
   const { _id } = req.user;
 
   try {
+    //Set CartTotal, ShippingCostTotal, Tax Total,cartItems
     let cartItems = [];
+    let cartTotal = 0;
+    let shippingCostTotal = 0;
+    let taxTotal = 0;
+    let finalCartTotal = 0;
 
+    //If no cart send error
+    if (!cart) {
+      return res.status(400).json({ success: false, message: "Missing input" });
+    }
     // check if user already have product in cart, if yes, then delete cart
     const alreadyExistCart = await Cart.findOne({ user: _id });
     if (alreadyExistCart) {
@@ -31,7 +39,6 @@ exports.userCart = async (req, res) => {
       object.product = cart[i].product;
       object.quantity = cart[i].quantity;
       let getPrice;
-      console.log("Varaint ID is " + cart[i].variant);
       //If Variant exist then getPrice from variant other wise from product
       if (cart[i].variant) {
         getPrice = await ProductVariant.findById(cart[i].variant)
@@ -41,7 +48,6 @@ exports.userCart = async (req, res) => {
             select: "_id tax discountType needToBuy needToView needToRegister",
           })
           .exec();
-        console.log("Varaint tax is " + getPrice.tax);
         object.tax = getPrice.product.tax;
         object.variant = cart[i].variant;
       } else {
@@ -55,9 +61,10 @@ exports.userCart = async (req, res) => {
       }
       //Validate if product quantity is enough.
       if (getPrice && getPrice.quantity < cart[i].quantity) {
-        return res
-          .status(400)
-          .json({ message: "Selected product quanity is not be available" });
+        return res.status(400).json({
+          success: false,
+          message: "Selected product quanity is not be available",
+        });
       }
 
       // Set Object in case order is for teambuy
@@ -117,12 +124,6 @@ exports.userCart = async (req, res) => {
       cartItems.push(object);
     }
 
-    //Set CartTotal, ShippingCostTotal, Tax Total
-    let cartTotal = 0;
-    let shippingCostTotal = 0;
-    let taxTotal = 0;
-    let finalCartTotal = 0;
-
     for (let i = 0; i < cartItems.length; i++) {
       cartTotal = cartTotal + cartItems[i].price * cartItems[i].quantity;
       if (cartItems[i].shippingCost)
@@ -145,9 +146,23 @@ exports.userCart = async (req, res) => {
       user: _id,
     }).save();
 
-    return res.status(200).json({ newCart });
+    if (newCart) {
+      return res.status(201).json({
+        success: true,
+        message: "cart created successfuylly",
+        data: newCart,
+      });
+    } else {
+      return res
+        .status(400)
+        .json({ success: false, message: "could not create user cart" });
+    }
   } catch (error) {
-    return res.status(400).json({ error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
   }
 };
 
@@ -156,6 +171,10 @@ exports.applyCoupon = async (req, res) => {
     //Set Variables
     const { cartId, coupon } = req.query;
     const { _id } = req.user;
+    //Set finalCartTotal based on discount
+    let cartTotalAfterCuponDiscount = 0.0;
+    let finalCartTotal = 0.0;
+    let couponDiscount = 0.0;
 
     //Check if coupon code is valid
     const validCoupon = await Coupon.findOne({
@@ -166,8 +185,11 @@ exports.applyCoupon = async (req, res) => {
     }).select("isPercent discount type min_buy max_discount products");
 
     if (validCoupon === null) {
-      return res.status(400).json({ type: "Error", message: "Invalid Coupon" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid Coupon" });
     }
+
     //Get cart total using cart ID.
     let { cartItems, cartTotal, couponApplied, shippingCostTotal } =
       await Cart.findOne({
@@ -175,20 +197,15 @@ exports.applyCoupon = async (req, res) => {
       });
 
     if (!cartTotal) {
-      return res.status(400).json({ type: "Error", message: "Invalid Cart" });
+      return res.status(400).json({ success: false, message: "Invalid Cart" });
     }
-
-    //Set finalCartTotal based on discount
-    let cartTotalAfterCuponDiscount = 0.0;
-    let finalCartTotal = 0.0;
-    let couponDiscount = 0.0;
 
     //If coupon type is total
     if (validCoupon.type == "total") {
       //If coupon type is total, send error if min_buy has not been met
       if (cartTotal - validCoupon.min_buy <= 0) {
         return res.status(400).json({
-          type: "Error",
+          success: false,
           message:
             "Cart total is less than minimum required amount " +
             validCoupon.min_buy,
@@ -206,7 +223,7 @@ exports.applyCoupon = async (req, res) => {
       );
       if (!cartProduct) {
         return res.status(400).json({
-          type: "Error",
+          success: false,
           message: "Coupon can not be used on this product",
         });
       }
@@ -231,17 +248,22 @@ exports.applyCoupon = async (req, res) => {
         finalCartTotal: finalCartTotal,
         couponApplied: true,
         coupon_code: validCoupon._id,
-      },
-      { new: true }
+      }
     );
-    return res.status(200).json({
-      type: "Success",
-      message: "Coupon Code applied",
-      finalCartTotal: finalCartTotal,
-    });
+    if (updateCartWithCoupon) {
+      return res.status(200).json({
+        success: true,
+        message: "Coupon Code applied",
+        data: finalCartTotal,
+      });
+    } else {
+      return res
+        .status(400)
+        .json({ success: false, message: "could not apply coupon to cart" });
+    }
   } catch (error) {
-    return res.status(400).json({
-      type: "Error",
+    return res.status(500).json({
+      success: false,
       message: "Something went wrong",
       error: error.message,
     });

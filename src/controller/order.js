@@ -23,7 +23,7 @@ exports.addOrder = async (req, res) => {
 
     // 2) Check if user entered all fields
     if (!addressId || !paymentType) {
-      return res.status(400).json({ type: "Error", message: "fieldsRequired" });
+      return res.status(400).json({ success:false, message: "fieldsRequired" });
     }
 
     //Validate if address is correct.
@@ -34,7 +34,7 @@ exports.addOrder = async (req, res) => {
       (adr) => adr._id.toString() == addressId.toString()
     );
     if (correctAddress == undefined) {
-      return res.status(400).json({ type: "Error", message: "addressInvalid" });
+      return res.status(400).json({ success:false, message: "addressInvalid" });
     }
 
     // 3) Get user cart
@@ -42,7 +42,7 @@ exports.addOrder = async (req, res) => {
 
     // 4) Check if cart doesn't exist
     if (!userCart || userCart.cartItems.length === 0) {
-      return res.status(404).json({ type: "Error", message: "noCartFound" });
+      return res.status(404).json({ success:false, message: "noCartFound" });
     }
 
     // 5) Check if order is slash deal or team buy or regular buy
@@ -64,7 +64,7 @@ exports.addOrder = async (req, res) => {
       if (!cardNumber || !expMonth || !expYear || !cvc) {
         return res
           .status(400)
-          .json({ type: "Error", message: "fieldsRequired" });
+          .json({ success:false, message: "fieldsRequired" });
       }
 
       // 7) TO DO: Create PAYMENT GATEWAY card token
@@ -122,7 +122,7 @@ exports.addOrder = async (req, res) => {
             ) {
               return res
                 .status(404)
-                .json({ type: "Error", message: "Team is not valid" });
+                .json({ success:false, message: "Team is not valid" });
             }
             //if it is a teambuy of type Buy, check the team condition
             if (isTeamValid.type == "Buy") {
@@ -269,18 +269,18 @@ exports.addOrder = async (req, res) => {
       // return res.status(400).json({ message: "Could not show order" });
       return res
         .status(201)
-        .json({ type: "success", mesage: "Order Created", order });
+        .json({success:true, mesage: "Order Created", order });
       //  });
     } else {
       return res
         .status(400)
-        .json({ type: "Error", message: "Could not create order" });
+        .json({ success:false, message: "Could not create order" });
     }
   } catch (error) {
     console.log("Catch Error for addOrder is::: " + error.message);
     return res
       .status(500)
-      .json({ type: "error", mesage: "Something went wrong" });
+      .json({ success:false, mesage: "Something went wrong" });
   }
 };
 
@@ -323,7 +323,7 @@ exports.updateOrderStatus = async (req, res) => {
       if (!req.body.tracking_code || !req.body.courier_agency) {
         return res
           .status(400)
-          .json({ type: "Error", message: "Missing Tracking Code" });
+          .json({ success:false, message: "Missing Tracking Code" });
       }
       updateDoc = {
         ...updateDoc,
@@ -348,17 +348,17 @@ exports.updateOrderStatus = async (req, res) => {
     if (updateOrderStatus) {
       return res
         .status(201)
-        .json({ type: "success", mesage: "Order Updated", updateOrderStatus });
+        .json({success:true, mesage: "Order Updated", updateOrderStatus });
     } else {
       return res.status(400).json({
-        type: "Error",
+        success:false,
         message: "Could not update order",
         error: error.message,
       });
     }
   } catch (error) {
     return res.status(400).json({
-      type: "Error",
+      success:false,
       message: "Something went wrong",
       error: error.message,
     });
@@ -475,7 +475,7 @@ exports.getOrderDetails = (req, res) => {
   } catch (error) {
     console.log("getOrder " + error.message);
     res.status(500).json({
-      type: "Error",
+      success:false,
       message: "Something went wrong",
     });
   }

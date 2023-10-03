@@ -40,7 +40,7 @@ exports.createReturnRequest = async (req, res) => {
     if (!foundOrder) {
       return res
         .status(400)
-        .json({ type: "Error", message: "Invalid Order ID" });
+        .json({ success:false, message: "Invalid Order ID" });
     }
     returnRequestObj.order_id = foundOrder._id;
 
@@ -52,7 +52,7 @@ exports.createReturnRequest = async (req, res) => {
     if (foundReturnRequest) {
       return res
         .status(400)
-        .json({ type: "Error", message: "Return Request already exist" });
+        .json({ success:false, message: "Return Request already exist" });
     }
 
     //TO DO: Check how many return requests that user created in last 30 days.
@@ -60,18 +60,18 @@ exports.createReturnRequest = async (req, res) => {
     const returnOrderRequest = await ReturnRequests.create(returnRequestObj);
     if (returnOrderRequest) {
       return res.status(201).json({
-        type: "success",
+       success:true,
         mesage: "Return Request Created",
         returnOrderRequest,
       });
     } else {
       return res
         .status(400)
-        .json({ type: "Error", message: "Could not create Return Request" });
+        .json({ success:false, message: "Could not create Return Request" });
     }
   } catch (error) {
     return res.status(500).json({
-      type: "error",
+      success:false,
       mesage: "Something went wrong",
       error: error.message,
     });
@@ -107,7 +107,7 @@ exports.updateReturnRequest = async (req, res) => {
           if (!req.body.refund_amount) {
             return res
               .status(400)
-              .json({ type: "Error", message: "Missing Refund Amount" });
+              .json({ success:false, message: "Missing Refund Amount" });
           }
           updatedReturnOrderObj.refund_amount = req.body.refund_amount;
         }
@@ -118,7 +118,7 @@ exports.updateReturnRequest = async (req, res) => {
         if (!req.body.reject_reason) {
           return res
             .status(400)
-            .json({ type: "Error", message: "Missing Reject Reason" });
+            .json({ success:false, message: "Missing Reject Reason" });
         }
         updatedReturnOrderObj.status = "Rejected";
         updatedReturnOrderObj.reject_reason = req.body.reject_reason;
@@ -142,18 +142,18 @@ exports.updateReturnRequest = async (req, res) => {
         }).exec();
       }
       return res.status(201).json({
-        type: "success",
+       success:true,
         mesage: "Return Order Updated",
         updatedReturnOrder,
       });
     } else {
       return res
         .status(400)
-        .json({ type: "Error", message: "Could not update Return order" });
+        .json({ success:false, message: "Could not update Return order" });
     }
   } catch (error) {
     return res.status(500).json({
-      type: "error",
+      success:false,
       mesage: "Something went wrong",
       error: error.message,
     });
@@ -200,7 +200,7 @@ exports.getAllReturnRequests = async (req, res) => {
     }
   } catch (error) {
     return res.status(500).json({
-      type: "error",
+      success:false,
       mesage: "Something went wrong",
       error: error.message,
     });
@@ -247,7 +247,7 @@ exports.getReturnRequests = async (req, res) => {
     }
   } catch (error) {
     return res.status(500).json({
-      type: "error",
+      success:false,
       mesage: "Something went wrong",
       error: error.message,
     });

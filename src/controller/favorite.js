@@ -6,14 +6,17 @@ exports.updateToWishList = async (req, res) => {
   const { prodId } = req.query;
   const { title } = req.query;
   try {
-    const args = title ? { user: _id, title: title } : { user: _id };
-    const wishlist = await Favorite.findOne(args);
+    let updateWishlist = {};
+    const findArgs = title ? { user: _id, title: title } : { user: _id };
+    const wishlist = await Favorite.findOne(findArgs);
     if (wishlist) {
       const alreadyadded = wishlist.favoriteItems.find(
         (id) => id.toString() === prodId
       );
+      //If product is already exist in wishlist than remove
+      //otherwise add it.
       if (alreadyadded) {
-        let _favorite = await Favorite.findByIdAndUpdate(
+        updateWishlist = await Favorite.findByIdAndUpdate(
           wishlist._id,
           {
             $pull: { favoriteItems: prodId },
@@ -22,11 +25,8 @@ exports.updateToWishList = async (req, res) => {
             new: true,
           }
         );
-        return res.status(201).json({
-          favorite: _favorite,
-        });
       } else {
-        let _favorite = await Favorite.findByIdAndUpdate(
+        updateWishlist = await Favorite.findByIdAndUpdate(
           wishlist._id,
           {
             $push: { favoriteItems: prodId },
@@ -35,31 +35,122 @@ exports.updateToWishList = async (req, res) => {
             new: true,
           }
         );
-        return res.status(201).json({
-          favorite: _favorite,
-        });
       }
-    } else {
+    } //if wish list is not exist then create it
+    else {
       let favoriteItems = [];
       favoriteItems.push(prodId);
-      console.log("I am here 01" + JSON.stringify(favoriteItems));
       const favorite = {
         user: _id,
         title: title,
         favoriteItems: favoriteItems,
       };
-
-      console.log("XXX " + JSON.stringify(favorite));
-      const _favorite = await Favorite.create(favorite);
-      return res.status(201).json({ favorite: _favorite });
+      updateWishlist = await Favorite.create(favorite);
     }
+    return res.status(200).json({
+      success: true,
+      message: "favorite list updated",
+      data: updateWishlist,
+    });
   } catch (error) {
-    return res.status(400).json({
-      message: error.message,
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
     });
   }
 };
 
+exports.deleteWishListById = async (req, res) => {
+  try {
+    const wishlistId = req.query.wishlistId;
+    //console.log("WishList ID is " + wishlistId);
+    if (!wishlistId) {
+      return res.status(400).json({ success: false, message: "Missing input" });
+    }
+    const result = await Favorite.findByIdAndDelete(wishlistId);
+    if (result) {
+      res
+        .status(202)
+        .json({ success: true, message: "WishList deleted sucessfully" });
+    } else {
+      return res
+        .status(400)
+        .json({ success: false, message: "could not delete wishlist" });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
+  }
+};
+
+exports.fetchWishList = async (req, res) => {
+  try {
+    const result = await Favorite.find({ user: req.user._id }).populate({
+      path: "favoriteItems",
+      select: ["name", "price", "productImages"],
+    });
+    if (result) {
+      return res.status(200).json({
+        success: true,
+        message: "fetched wishlist",
+        data: result,
+      });
+    } else {
+      return res
+        .status(204)
+        .json({ success: true, message: "No result found", data: [] });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
+  }
+};
+
+exports.fetchAllWishlistProducts = async (req, res) => {
+  try {
+    const wishlistItems = await Favorite.aggregate([
+      {
+        $match: {},
+      },
+      { $unset: ["_id", "user", "title", "createdAt", "updatedAt", "__v"] },
+      { $unwind: "$favoriteItems" },
+      {
+        $group: {
+          _id: "$favoriteItems",
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1, _id: -1 } },
+    ]);
+    if (wishlistItems) {
+      return res.status(200).json({
+        success: true,
+        message: "fetched wishlist Items",
+        data: wishlistItems,
+        size: wishlistItems.length,
+      });
+    } else {
+      return res
+        .status(204)
+        .json({ success: true, message: "No result found", data: [] });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
+  }
+};
+
+/*
 exports.addItemToWishList1 = (req, res) => {
   //Favorite.findOne({ _id: req.query.wishlistid }).exec((error, favorite) => {
   Favorite.findOne({ user: req.user._id }).exec((error, favorite) => {
@@ -142,76 +233,4 @@ exports.removeItemFromWishList = (req, res) => {
       });
     }
   });
-};
-
-exports.deleteWishListById = (req, res) => {
-  const wishlistId = req.query.wishlistId;
-  //console.log("WishList ID is " + wishlistId);
-  if (wishlistId) {
-    console.log("WishList ID is " + wishlistId);
-    Favorite.findOneAndDelete({ _id: wishlistId }).exec((error, result) => {
-      if (error || !result) return res.status(400).json({ error });
-      if (result) {
-        res.status(202).json({ message: "WishList deleted sucessfully" });
-      }
-    });
-  } else {
-    res.status(400).json({ error: "Params required" });
-  }
-};
-
-exports.fetchWishList = (req, res) => {
-  Favorite.find({ user: req.user._id })
-    .populate({
-      path: "favoriteItems",
-      select: ["name", "price", "productImages"],
-    })
-    .exec((err, result) => {
-      if (err) return res.status(400).send(err);
-      return res.status(200).send(result);
-    });
-};
-
-exports.fetchAllWishlistProducts = (req, res) => {
-  Favorite.aggregate([
-    {
-      $match: {},
-    },
-    { $unset: ["_id", "user", "title", "createdAt", "updatedAt", "__v"] },
-    { $unwind: "$favoriteItems" },
-    {
-      $group: {
-        _id: "$favoriteItems",
-        count: { $sum: 1 },
-      },
-    },
-    /*  {
-      $lookup: {
-        from: Product.collection.name,
-        localField: "favoriteItems",
-        foreignField: "_id",
-        as: "prod",
-      },
-    },
-    {
-      $group: {
-        _id: "$prod.name",
-        count: { $sum: 1 },
-      },
-    },*/
-
-    // Sort by year descending
-    { $sort: { count: -1, _id: -1 } },
-  ])
-    //.find()
-    /*
-    .distinct("favoriteItems")
-    .populate({
-      path: "favoriteItems",
-      select: ["name", "price", "productImages"],
-    })*/
-    .exec((err, data) => {
-      if (err) return res.status(400).send(err);
-      return res.status(200).send({ size: data.length, data });
-    });
-};
+};*/
