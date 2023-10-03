@@ -27,7 +27,7 @@ module.exports.register = async (req, res) => {
     //If user is exist and is blocked
     if (findUser && findUser.isBlocked) {
       return res.status(400).json({
-        type: "Error",
+        success:false,
         message: "User account is locked, contact call center",
       });
     }
@@ -46,7 +46,7 @@ module.exports.register = async (req, res) => {
       });
       //Send response
       return res.status(201).json({
-        type: "Success",
+       success:true,
         message: "OTP sent to mobile number",
         user: findUser._id,
         otp,
@@ -54,7 +54,7 @@ module.exports.register = async (req, res) => {
     } //If user is exist and mobile is verified
     else if (findUser && findUser.isMobileVerified) {
       return res.status(400).json({
-        type: "Error",
+        success:false,
         message: "User account is already exist",
       });
     } else {
@@ -86,7 +86,7 @@ module.exports.register = async (req, res) => {
       });
       //Send response
       return res.status(201).json({
-        type: "Success",
+       success:true,
         message: "User account created and OTP sent to mobile number",
         user: _user._id,
         expireTime: Date.now() + 60 * 60 * 1000,
@@ -95,7 +95,7 @@ module.exports.register = async (req, res) => {
     }
   } catch (error) {
     return res.status(400).json({
-      type: "Error",
+      success:false,
       message: "Something went wrong",
       error: error.message,
     });
@@ -113,7 +113,7 @@ module.exports.loginUser = async (req, res) => {
         //TO DO:Try to add to Login attempts table
         return res.status(400).json({
           message: "User account is blocked",
-          type: "Error",
+          success:false,
         });
       }
       const token = await generateAuthTokens(findUser?._id);
@@ -146,18 +146,18 @@ module.exports.loginUser = async (req, res) => {
         userDetials,
         expireTime: Date.now() + 72 * 60 * 60 * 1000,
         message: "User login successful",
-        type: "Success",
+       success:true,
       });
     } else {
       //TO DO:Try to add to Login attempts table
       return res.status(400).json({
-        type: "Error",
+        success:false,
         message: "Invalid Credentials",
       });
     }
   } catch (error) {
     return res.status(400).json({
-      type: "Error",
+      success:false,
       message: "Something went wrong",
       error: error.message,
     });
@@ -201,7 +201,7 @@ module.exports.verifyPhoneOtp = async (req, res) => {
     await user.save();
 
     res.status(201).json({
-      type: "success",
+     success:true,
       message: "OTP verified successfully",
       data: {
         accessToken: tokens.accessToken,
@@ -224,7 +224,7 @@ module.exports.resendPhoneOtp = async (req, res) => {
     //If user is exist and is blocked
     if (user && user.isBlocked) {
       return res.status(400).json({
-        type: "Error",
+        success:false,
         message: "User account is locked, contact call center",
       });
     }
@@ -235,7 +235,7 @@ module.exports.resendPhoneOtp = async (req, res) => {
       user.lockedTill > Date.now()
     ) {
       return res.status(400).json({
-        type: "Error",
+        success:false,
         message: "User account is locked, try after some time",
       });
     }
@@ -255,7 +255,7 @@ module.exports.resendPhoneOtp = async (req, res) => {
       contactNumber: user.mobile,
     });
     return res.status(200).json({
-      type: "Success",
+     success:true,
       message: "OTP sent to mobile number",
       otp,
     });
@@ -294,14 +294,14 @@ module.exports.handleRefreshToken = async (req, res) => {
     const findUser = await User.findOne({ refreshToken: refresh_token });
     if (!findUser) {
       return res.status(400).json({
-        type: "Error",
+        success:false,
         message: "No Refresh token present in db or not matched",
       });
     }
     jwt.verify(refresh_token, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
       if (err || findUser._id != user.id) {
         return res.status(400).json({
-          type: "Error",
+          success:false,
           message: "There is something wrong with refresh token",
           error: err,
         });
@@ -315,7 +315,7 @@ module.exports.handleRefreshToken = async (req, res) => {
     });
   } catch (error) {
     return res.status(400).json({
-      type: "Error",
+      success:false,
       message: "Something went wrong",
       error: error.message,
     });
@@ -447,25 +447,25 @@ module.exports.updatePassword = async (req, res) => {
       if (updatedPassword) {
         //TO DO: To send the email after password has been changed.
         return res.status(200).json({
-          type: "Success",
+         success:true,
           message: "successfully updated the password",
         });
       } else {
         return res.status(400).json({
-          type: "Error",
+          success:false,
           message: "Error in updating the password",
         });
       }
     } else {
       return res.status(400).json({
-        type: "Error",
+        success:false,
         message: "missing the password",
         user: req.user,
       });
     }
   } catch (error) {
     return res.status(500).json({
-      type: "Error",
+      success:false,
       message: "Something went wrong",
       error: error.message,
     });
@@ -506,13 +506,13 @@ module.exports.forgotPassword = async (req, res) => {
 
     // 5) If everything is OK, send data
     return res.status(200).json({
-      type: "Success",
+     success:true,
       message: "successfully sent the password reset Link",
       resetPasswordToken, //TO DO: TO remove
     });
   } catch (error) {
     return res.status(400).json({
-      type: "Error",
+      success:false,
       message: "Something went wrong",
     });
   }
@@ -530,7 +530,7 @@ module.exports.resetPassword = async (req, res) => {
     console.log("xxx" + resetPasswordToken);
     if (!user) {
       return res.status(400).json({
-        type: "Error",
+        success:false,
         message: " Token Expired, Please try again later",
       });
     }
@@ -541,13 +541,13 @@ module.exports.resetPassword = async (req, res) => {
     await user.save();
     //TO DO:Sending after reset password mail
     return res.status(200).json({
-      type: "Success",
+     success:true,
       message: "successfully Reset the password",
       user, //TO DO: Update the user object to send only few fileds
     });
   } catch (error) {
     return res.status(400).json({
-      type: "Error",
+      success:false,
       message: "Something went wrong",
       error: error.message,
     });
@@ -576,10 +576,10 @@ module.exports.logout = async (req, res) => {
     });
     return res
       .status(200)
-      .json({ type: "Success", message: "Signout successfully...!" });
+      .json({success:true, message: "Signout successfully...!" });
   } catch (error) {
     return res.status(400).json({
-      type: "Error",
+      success:false,
       message: "Something went wrong",
       error: error.message,
     });
@@ -630,7 +630,7 @@ module.exports.verifyPhoneOtp5 = async (req, res, next) => {
     await user.save();
 
     res.status(201).json({
-      type: "success",
+     success:true,
       message: "OTP verified successfully",
       data: {
         token,
@@ -648,13 +648,13 @@ module.exports.register5 = (req, res) => {
       //In case of any error in searching user send error.
       if (error)
         return res.status(400).json({
-          type: "Error",
+          success:false,
           message: "Something went wrong",
         });
       //If user is already exist send error
       if (user) {
         return res.status(401).json({
-          type: "Error",
+          success:false,
           message: "User is already registered",
         });
       }
@@ -674,7 +674,7 @@ module.exports.register5 = (req, res) => {
 
         const tokens = await generateAuthTokens(_user);
         return res.status(201).json({
-          type: "Success",
+         success:true,
           message: "User created successfully",
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken,
@@ -693,7 +693,7 @@ module.exports.register5 = (req, res) => {
         //send error in case of any error in user creation.
         if (error) {
           return res.status(400).json({
-            type: "Error",
+            success:false,
             message: "Something went wrong " + error,
           });
         }
@@ -726,7 +726,7 @@ module.exports.register5 = (req, res) => {
             balance,
           } = data;
           return res.status(201).json({
-            type: "Success",
+           success:true,
             message: "User created successfully",
             token,
             refreshtoken,
@@ -753,7 +753,7 @@ module.exports.register5 = (req, res) => {
     });
   } catch (error) {
     return res.status(400).json({
-      type: "Error",
+      success:false,
       message: "Something went wrong",
     });
   }
@@ -764,13 +764,13 @@ module.exports.login5 = (req, res) => {
     if (error)
       return res.status(400).json({
         message: "Something went wrong",
-        type: "Error",
+        success:false,
       });
     if (user) {
       if (user.isBlocked) {
         return res.status(400).json({
           message: "User account is blocked",
-          type: "Error",
+          success:false,
         });
       }
       if (user.authenticate(req.body.password)) {
@@ -820,17 +820,17 @@ module.exports.login5 = (req, res) => {
           },
           expireTime: Date.now() + 60 * 60 * 1000,
           message: "User exists",
-          type: "Success",
+         success:true,
         });
       } else {
         return res.status(400).json({
-          type: "Error",
+          success:false,
           message: "Invalid Password",
         });
       }
     } else {
       return res.status(400).json({
-        type: "Error",
+        success:false,
         message: "User is not registered",
       });
     }
