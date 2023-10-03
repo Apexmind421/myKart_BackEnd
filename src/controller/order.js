@@ -23,7 +23,9 @@ exports.addOrder = async (req, res) => {
 
     // 2) Check if user entered all fields
     if (!addressId || !paymentType) {
-      return res.status(400).json({ success:false, message: "fieldsRequired" });
+      return res
+        .status(400)
+        .json({ success: false, message: "fieldsRequired" });
     }
 
     //Validate if address is correct.
@@ -34,7 +36,9 @@ exports.addOrder = async (req, res) => {
       (adr) => adr._id.toString() == addressId.toString()
     );
     if (correctAddress == undefined) {
-      return res.status(400).json({ success:false, message: "addressInvalid" });
+      return res
+        .status(400)
+        .json({ success: false, message: "addressInvalid" });
     }
 
     // 3) Get user cart
@@ -42,7 +46,7 @@ exports.addOrder = async (req, res) => {
 
     // 4) Check if cart doesn't exist
     if (!userCart || userCart.cartItems.length === 0) {
-      return res.status(404).json({ success:false, message: "noCartFound" });
+      return res.status(404).json({ success: false, message: "noCartFound" });
     }
 
     // 5) Check if order is slash deal or team buy or regular buy
@@ -64,7 +68,7 @@ exports.addOrder = async (req, res) => {
       if (!cardNumber || !expMonth || !expYear || !cvc) {
         return res
           .status(400)
-          .json({ success:false, message: "fieldsRequired" });
+          .json({ success: false, message: "fieldsRequired" });
       }
 
       // 7) TO DO: Create PAYMENT GATEWAY card token
@@ -122,7 +126,7 @@ exports.addOrder = async (req, res) => {
             ) {
               return res
                 .status(404)
-                .json({ success:false, message: "Team is not valid" });
+                .json({ success: false, message: "Team is not valid" });
             }
             //if it is a teambuy of type Buy, check the team condition
             if (isTeamValid.type == "Buy") {
@@ -262,6 +266,7 @@ exports.addOrder = async (req, res) => {
           }).exec(); //findOneAndUpdate
         }
       }
+      //TO DO: To use promise
       const updated = Product.bulkWrite(update, {});
       const deleteCart = Cart.deleteOne({ _id: userCart._id }).exec();
       //.exec((error, cart) => {
@@ -269,18 +274,19 @@ exports.addOrder = async (req, res) => {
       // return res.status(400).json({ message: "Could not show order" });
       return res
         .status(201)
-        .json({success:true, mesage: "Order Created", order });
+        .json({ success: true, mesage: "Order Created", data: order._id });
       //  });
     } else {
       return res
         .status(400)
-        .json({ success:false, message: "Could not create order" });
+        .json({ success: false, message: "Could not create order" });
     }
   } catch (error) {
-    console.log("Catch Error for addOrder is::: " + error.message);
-    return res
-      .status(500)
-      .json({ success:false, mesage: "Something went wrong" });
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
   }
 };
 
@@ -294,14 +300,20 @@ exports.updateOrder = async (req, res) => {
       updatedOrderObj.orderStatus.date = new Date();
     }
     console.log("Update Obj " + JSON.stringify(updatedOrderObj));
-    const updateOrderStatus = await Order.findByIdAndUpdate(
-      id,
-      updatedOrderObj,
-      { new: true }
-    );
-    res.json(updateOrderStatus);
+    const updatedOrder = await Order.findByIdAndUpdate(id, updatedOrderObj, {
+      new: true,
+    });
+    return res.status(202).json({
+      success: true,
+      message: "order updated",
+      data: updatedOrder,
+    });
   } catch (error) {
-    return res.status(400).json({ error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
   }
 };
 
@@ -323,7 +335,7 @@ exports.updateOrderStatus = async (req, res) => {
       if (!req.body.tracking_code || !req.body.courier_agency) {
         return res
           .status(400)
-          .json({ success:false, message: "Missing Tracking Code" });
+          .json({ success: false, message: "Missing Tracking Code" });
       }
       updateDoc = {
         ...updateDoc,
@@ -341,100 +353,127 @@ exports.updateOrderStatus = async (req, res) => {
       };
     }
 
-    const updateOrderStatus = await Order.findByIdAndUpdate(id, updateDoc, {
-      new: true,
-    });
+    const updateOrderStatus = await Order.findByIdAndUpdate(id, updateDoc);
 
     if (updateOrderStatus) {
-      return res
-        .status(201)
-        .json({success:true, mesage: "Order Updated", updateOrderStatus });
+      return res.status(201).json({
+        success: true,
+        mesage: "Order Updated",
+        data: updateOrderStatus,
+      });
     } else {
       return res.status(400).json({
-        success:false,
+        success: false,
         message: "Could not update order",
-        error: error.message,
       });
     }
   } catch (error) {
-    return res.status(400).json({
-      success:false,
+    return res.status(500).json({
+      success: false,
       message: "Something went wrong",
       error: error.message,
     });
   }
 };
 
-exports.getOrders = (req, res) => {
-  //Set Filter Conditions
-  let findArgs = { user: req.user._id };
-  if (req.body.isActive) {
-    findArgs = { ...findArgs, isActive: req.body.isActive };
-  }
-  if (req.body.createdAfter) {
-    findArgs = { ...findArgs, createdAt: { $gt: req.body.createdAfter } };
-  }
-  if (req.body.createdBefore) {
-    findArgs = { ...findArgs, createdAt: { $lt: req.body.createdBefore } };
-  }
+exports.getOrders = async (req, res) => {
+  try {
+    //Set Filter Conditions
+    let findArgs = { user: req.user._id };
+    if (req.body.isActive) {
+      findArgs = { ...findArgs, isActive: req.body.isActive };
+    }
+    if (req.body.createdAfter) {
+      findArgs = { ...findArgs, createdAt: { $gt: req.body.createdAfter } };
+    }
+    if (req.body.createdBefore) {
+      findArgs = { ...findArgs, createdAt: { $lt: req.body.createdBefore } };
+    }
 
-  //Set Sortting
-  const sortOrder =
-    req.query.sortOrder && req.query.sortOrder === "latest"
-      ? { createdAt: 1 }
-      : { _id: -1 };
+    //Set Sortting
+    const sortOrder =
+      req.query.sortOrder && req.query.sortOrder === "latest"
+        ? { createdAt: 1 }
+        : { _id: -1 };
 
-  //Set Skip and Limit
-  const skip = req.query.page ? (req.query.page - 1) * 5 : 0;
-  const limit = req.query.limit ? parseInt(req.query.limit) : 5;
+    //Set Skip and Limit
+    const skip = req.query.page ? (req.query.page - 1) * 5 : 0;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 5;
 
-  Order.find(findArgs)
-    .sort(sortOrder)
-    .skip(skip)
-    .limit(limit)
-    .exec((error, orders) => {
-      if (error) return res.status(400).json({ error });
-      if (orders) {
-        res.status(200).json({ orders });
-      }
+    const orders = await Order.find(findArgs)
+      .sort(sortOrder)
+      .skip(skip)
+      .limit(limit);
+    if (orders) {
+      return res.status(200).json({
+        success: true,
+        message: "fetched user orders",
+        data: orders,
+        size: order.length,
+      });
+    } else {
+      return res
+        .status(204)
+        .json({ success: true, message: "No result found", data: [] });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
     });
+  }
 };
 
 //To DO: To be moved to Admin order file
-exports.getAllOrders = (req, res) => {
-  //Set Filter Conditions
-  let findArgs = {};
-  const { isActive, createdAfter, createdBefore } = req.body.search;
-  if (isComplete) {
-    findArgs = { ...findArgs, isActive: isActive };
-  }
-  if (createdAfter) {
-    findArgs = { ...findArgs, createdAt: { $gt: createdAfter } };
-  }
-  if (createdBefore) {
-    findArgs = { ...findArgs, createdAt: { $lt: createdBefore } };
-  }
+exports.getAllOrders = async (req, res) => {
+  try {
+    //Set Filter Conditions
+    let findArgs = {};
+    const { isActive, createdAfter, createdBefore } = req.body.search;
+    if (isComplete) {
+      findArgs = { ...findArgs, isActive: isActive };
+    }
+    if (createdAfter) {
+      findArgs = { ...findArgs, createdAt: { $gt: createdAfter } };
+    }
+    if (createdBefore) {
+      findArgs = { ...findArgs, createdAt: { $lt: createdBefore } };
+    }
 
-  //Set Sortting
-  const sortOrder =
-    req.query.sortOrder && req.query.sortOrder === "latest"
-      ? { createdAt: 1 }
-      : { _id: -1 };
+    //Set Sortting
+    const sortOrder =
+      req.query.sortOrder && req.query.sortOrder === "latest"
+        ? { createdAt: 1 }
+        : { _id: -1 };
 
-  //Set Skip and Limit
-  const skip = req.query.page ? (req.query.page - 1) * 5 : 0;
-  const limit = req.query.limit ? parseInt(req.query.limit) : 10;
+    //Set Skip and Limit
+    const skip = req.query.page ? (req.query.page - 1) * 5 : 0;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 10;
 
-  Order.find(findArgs)
-    .sort(sortOrder)
-    .skip(skip)
-    .limit(limit)
-    .exec((error, orders) => {
-      if (error) return res.status(400).json({ error });
-      if (orders) {
-        res.status(200).json({ orders });
-      }
+    const orders = await Order.find(findArgs)
+      .sort(sortOrder)
+      .skip(skip)
+      .limit(limit);
+    if (orders) {
+      return res.status(200).json({
+        success: true,
+        message: "fetched user orders",
+        data: orders,
+        size: order.length,
+      });
+    } else {
+      return res
+        .status(204)
+        .json({ success: true, message: "No result found", data: [] });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
     });
+  }
 };
 
 exports.deleteOrders = (req, res) => {
@@ -446,37 +485,41 @@ exports.deleteOrders = (req, res) => {
   });
 };
 
-exports.getOrderDetails = (req, res) => {
+exports.getOrderDetails = async (req, res) => {
   try {
-    Order.findOne({ _id: req.body.orderId })
+    const foundOrder = await Order.findById(req.body.orderId)
       .populate("items.product", "_id name productImages")
       .populate({
         path: "team",
         //select: ["_id", "members"],
         populate: [{ path: "members", select: ["username"] }],
-      })
-      .exec((error, order) => {
-        if (error) return res.status(400).json({ error });
-        if (order) {
-          Address.findOne({
-            user: req.user._id,
-            // _id: order.addressId,
-          }).exec((error, address) => {
-            if (error) return res.status(400).json({ error });
-            order.address = address.address.find(
-              (adr) => adr._id.toString() == order.addressId.toString()
-            );
-            res.status(200).json({
-              order,
-            });
-          });
-        }
       });
+    //TO DO: Use promise
+    if (foundOrder) {
+      Address.findOne({
+        user: req.user._id,
+        // _id: order.addressId,
+      }).exec((error, address) => {
+        if (error) return res.status(400).json({ error });
+        order.address = address.address.find(
+          (adr) => adr._id.toString() == foundOrder.addressId.toString()
+        );
+        return res.status(200).json({
+          success: true,
+          message: "fetched order details",
+          data: foundOrder,
+        });
+      });
+    } else {
+      return res
+        .status(204)
+        .json({ success: true, message: "No result found", data: [] });
+    }
   } catch (error) {
-    console.log("getOrder " + error.message);
-    res.status(500).json({
-      success:false,
+    return res.status(500).json({
+      success: false,
       message: "Something went wrong",
+      error: error.message,
     });
   }
 };
