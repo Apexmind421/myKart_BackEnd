@@ -52,16 +52,16 @@ exports.addAddress = async (req, res) => {
 
 exports.getAddress = async (req, res) => {
   try {
-    const excludeFields = {
-      _id: 0,
-      user: 0,
-      __v: 0,
-      createdAt: 0,
-      updatedAt: 0,
-    };
     const userAddress = await UserAddress.findOne(
       { user: req.user._id },
-      excludeFields
+      { address: 1, defaultAddress: 1, _id: 0 }
+      /* {
+        _id: 0,
+        user: 0,
+        __v: 0,
+        createdAt: 0,
+        updatedAt: 0,
+      }*/
     ).populate({
       path: "address.zipCode",
       select: ["zipCode", "city", "district", "state"],
