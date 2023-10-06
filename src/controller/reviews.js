@@ -21,7 +21,7 @@ exports.addProductReview = async (req, res) => {
     //console.log("product ID is " + req.user._id);
     const productId = req.query.id;
     if (productId) {
-      const product = await Product.findOne({ _id: productId });
+      const product = await Product.findById(productId);
       if (product) {
         /*   let today = new Date();
           var dd = String(today.getDate()).padStart(2, "0");
@@ -76,24 +76,160 @@ exports.addProductReview = async (req, res) => {
           });
         }
       });*/
-        let finalproduct = await Product.findByIdAndUpdate(
-          productId,
-          {
-            reviews: product.reviews,
-            numReviews: product.numReviews,
-            rating: product.rating,
-          },
-          { new: true }
-        );
-        return res.status(200).json(finalproduct);
+        let finalproduct = await Product.findByIdAndUpdate(productId, {
+          reviews: product.reviews,
+          numReviews: product.numReviews,
+          rating: product.rating,
+        });
+        return res.status(201).json({
+          success: true,
+          message: "added product review",
+          data: finalproduct,
+        });
       } else {
-        return res.status(400).json({ message: "Unable to find product" });
+        return res
+          .status(400)
+          .json({ success: false, message: "could not find product" });
       }
     } else {
-      return res.status(400).json({ error: "Product ID is required" });
+      return res.status(400).json({ success: false, message: "Missing input" });
     }
   } catch (error) {
-    return res.status(400).json({ error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
+  }
+};
+
+exports.getUserReviews = (req, res) => {
+  try {
+    Product.aggregate([
+      //    { $match: { "reviews.name": "642effd2a1cfbda64464f726" } },
+      {
+        $project: {
+          reviews: 1,
+        },
+      },
+      { $unwind: "$reviews" },
+      //   { $match: { "reviews.name": "642effd2a1cfbda64464f726" } },
+    ])
+      //.distinct("reviews")
+      //.find().select("reviews")
+      // .find({ name: "samosa" })
+      .exec((error, data) => {
+        if (error) return res.status(400).json({ error });
+        if (data) {
+          console.log("reviews" + data.length);
+          if (req.query.all && req.query.all.toString() == "true") {
+            return res.status(200).json({ size: data.length, reviews: data });
+          }
+          //if (!req.query.all && )
+          else {
+            const userReviews = data.filter(
+              (userId) =>
+                userId.reviews.name.toString() === req.user._id.toString()
+            );
+            return res.status(200).json({
+              success: true,
+              message: "fetched user reviews",
+              size: userReviews.length,
+              data: userReviews,
+            });
+          }
+        } else {
+          return res
+            .status(400)
+            .json({ success: false, message: "No product reviews found" });
+        }
+      });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
+  }
+};
+
+exports.getProductReviews = (req, res) => {
+  try {
+    const productId = req.query.id;
+    const skip = req.query.page ? (req.query.page - 1) * 5 : 0;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 5;
+    if (productId) {
+      Product.findById(productId).exec((error, product) => {
+        if (error)
+          return res.status(400).json({
+            error,
+          });
+        if (product) {
+          let myArray = product.reviews;
+          let finalReviewList = myArray.slice(skip, limit + skip);
+          return res.status(200).json({
+            success: true,
+            message: "fetched product address",
+            size: finalReviewList.length,
+            data: finalReviewList,
+          });
+        } else {
+          return res
+            .status(400)
+            .json({ success: false, message: "no reviews for the products" });
+        }
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
+  }
+};
+
+exports.deleteProductReviews = (req, res) => {
+  try {
+    const productId = req.query.id;
+    if (productId) {
+      Product.findOne({ _id: productId }).exec((error, product) => {
+        if (error)
+          return res.status(400).json({
+            success: false,
+            message: "something went wrong",
+            error: error.message,
+          });
+        if (product) {
+          product.reviews = [];
+          product.save((err, prod) => {
+            if (err) {
+              res.status(400).json({
+                success: false,
+                message: "something went wrong",
+                error: err.message,
+              });
+            }
+            if (prod) {
+              return res.status(202).json({
+                success: true,
+                message: "Reviews deleted sucessfully",
+              });
+            }
+          });
+        } else {
+          return res
+            .status(400)
+            .json({ success: false, message: "no reviews for the products" });
+        }
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
   }
 };
 
@@ -221,103 +357,5 @@ exports.addProductReview1 = async (req, res) => {
     }
   } catch (error) {
     return res.status(400).json({ error: error.message });
-  }
-};
-
-exports.getUserReviews = (req, res) => {
-  Product.aggregate([
-    //    { $match: { "reviews.name": "642effd2a1cfbda64464f726" } },
-    {
-      $project: {
-        reviews: 1,
-      },
-    },
-    { $unwind: "$reviews" },
-    //   { $match: { "reviews.name": "642effd2a1cfbda64464f726" } },
-  ])
-    //.distinct("reviews")
-    //.find().select("reviews")
-    // .find({ name: "samosa" })
-    .exec((error, data) => {
-      if (error) return res.status(400).json({ error });
-      if (data) {
-        console.log("reviews" + data.length);
-        if (req.query.all && req.query.all.toString() == "true") {
-          return res.status(200).json({ size: data.length, reviews: data });
-        }
-        //if (!req.query.all && )
-        else {
-          const userReviews = data.filter(
-            (userId) =>
-              userId.reviews.name.toString() === req.user._id.toString()
-          );
-          return res
-            .status(200)
-            .json({ size: userReviews.length, reviews: userReviews });
-        }
-      } else {
-        return res.status(400).json({ message: "No product reviews found" });
-      }
-    });
-};
-
-exports.getProductReviews = (req, res) => {
-  const productId = req.query.id;
-  const skip = req.query.page ? (req.query.page - 1) * 5 : 0;
-  const limit = req.query.limit ? parseInt(req.query.limit) : 5;
-  if (productId) {
-    Product.findById(productId).exec((error, product) => {
-      console.log("Reviews 1 are ******************" + JSON.stringify(product));
-
-      if (error)
-        return res.status(400).json({
-          error,
-        });
-      if (product) {
-        let myArray = product.reviews;
-        let finalReviewList = myArray.slice(skip, limit + skip);
-        console.log("Reviews are ******************" + JSON.stringify(myArray));
-        //myArray.slice(skip, limit);
-        //console.log(
-        // "*********************Reviews are " + JSON.stringify(myArray)
-        //);
-        //product.reviews.slice(2, 3);
-        return res
-          .status(200)
-          .json({ size: finalReviewList.length, reviews: finalReviewList });
-      } else {
-        return res.status(400).json({ message: "no reviews for the products" });
-      }
-    });
-  }
-};
-
-exports.deleteProductReviews = (req, res) => {
-  const productId = req.query.id;
-  if (productId) {
-    Product.findOne({ _id: productId }).exec((error, product) => {
-      if (error)
-        return res.status(400).json({
-          error,
-        });
-      if (product) {
-        product.reviews = [];
-        product.save((err, prod) => {
-          if (err) {
-            res.status(400).json({
-              message: err,
-            });
-          }
-          if (prod) {
-            return res.status(201).json({
-              message: "Reviews deleted sucessfully",
-              product: prod,
-            });
-          }
-        });
-      } else {
-        return res.status(400).json({ message: "no reviews for the products" });
-      }
-    });
   }
 };

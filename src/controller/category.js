@@ -4,7 +4,7 @@ const DatauriParser = require("datauri/parser");
 const path = require("path");
 const parser = new DatauriParser();
 const { uploader } = require("../config/cloudinary.config");
-
+const { categoryData } = require("../data/categories");
 const { cloudinaryUploadImg } = require("../utils/cloudinary");
 const fs = require("fs");
 
@@ -91,7 +91,7 @@ exports.addCategory = async (req, res) => {
 
 exports.fetchCategories = async (req, res) => {
   try {
-    const findArgs = req.query.id
+    /* const findArgs = req.query.id
       ? {
           $or: [
             { _id: req.query.id },
@@ -101,8 +101,22 @@ exports.fetchCategories = async (req, res) => {
           ],
         }
       : {};
-    const showHierarchy = req.query.showHierarchy ? true : false;
-    const categories = await Category.find(findArgs);
+      const categories = await Category.find(findArgs);
+      */
+    const useLocal = req.query.useLocal ? req.query.useLocal : false;
+    const showHierarchy = req.query.showHierarchy
+      ? req.query.showHierarchy
+      : false;
+    let categories;
+    if (useLocal) {
+      if (categoryData.data.length > 0) {
+        categories = categoryData.data;
+      } else {
+        categories = await Category.find();
+      }
+    } else {
+      categories = await Category.find();
+    }
     if (categories) {
       let categoryList = categories;
       if (showHierarchy) {

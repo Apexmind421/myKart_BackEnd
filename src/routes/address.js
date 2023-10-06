@@ -12,11 +12,11 @@ const {
 } = require("../controller/address");
 
 const router = express.Router();
-router.get("/user/getaddress", requireLogin, getAddress);
-router.post("/user/address/create", requireLogin, addAddress);
-router.patch("/user/address/update", requireLogin, modifyAddress);
-router.delete("/user/deleteaddress", requireLogin, deleteAddress);
-router.patch("/user/address/default", requireLogin, setDefaultAddress);
+router.get("/fetch", requireLogin, getAddress);
+router.post("/create", requireLogin, addAddress);
+router.patch("/update", requireLogin, modifyAddress);
+router.delete("/delete", requireLogin, deleteAddress);
+router.patch("/default", requireLogin, setDefaultAddress);
 router.get("/zipcodes", getZipCodes);
 
 //TEMP

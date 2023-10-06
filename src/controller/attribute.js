@@ -33,12 +33,12 @@ exports.addAttribute = async (req, res) => {
 };
 exports.fetchAttribute = async (req, res) => {
   try {
-    const getAttribute = await Attribute.find();
+    const getAttribute = await Attribute.find().select("name value status");
     if (getAttribute) {
       return res.status(200).json({
         success: true,
         message: "fetched attributes",
-        size: data.length,
+        // size: getAttribute.length,
         data: getAttribute,
       });
     } else {

@@ -32,6 +32,7 @@ const ticketSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    isActive: { type: Boolean, default: true },
     updated_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     viewed: { type: Number, enum: [0, 1], default: 0 },
     client_viewed: { type: Number, enum: [0, 1], default: 0 },

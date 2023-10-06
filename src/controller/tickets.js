@@ -1,6 +1,5 @@
 const Tickets = require("../models/tickets");
 const { cloudinaryUploadImg } = require("../utils/cloudinary");
-const fs = require("fs");
 
 exports.addTicket = async (req, res) => {
   try {
@@ -24,10 +23,20 @@ exports.addTicket = async (req, res) => {
     _ticket.save((error, ticket) => {
       //console.log("I am here in the category save");
       if (error) return res.status(400).json({ error });
-      if (ticket) return res.status(201).json({ ticket });
+      if (ticket) {
+        return res.status(201).json({
+          success: true,
+          message: "created ticket",
+          data: ticket,
+        });
+      }
     });
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
   }
 };
 
@@ -37,19 +46,33 @@ exports.updateTicket = async (req, res) => {
     if (ticketId) {
       const ticketObj = req.body;
       ticketObj.updated_by = req.user._id;
-      const _updateProduct = await Tickets.findByIdAndUpdate(
+      if (req.body.status && req.body.status == "completed") {
+        ticketObj.isActive = false;
+      }
+      const updatedTicket = await Tickets.findByIdAndUpdate(
         ticketId,
-        ticketObj,
-        {
-          new: true,
-        }
+        ticketObj
       );
-      res.status(200).json(_updateProduct);
+      if (updatedTicket) {
+        return res.status(200).json({
+          success: true,
+          message: "updated ticket",
+          data: updatedTicket,
+        });
+      } else {
+        return res
+          .status(400)
+          .json({ success: false, message: "could not update ticket" });
+      }
     } else {
-      return res.status(400).json({ message: "Missing inputs" });
+      return res.status(400).json({ success: false, message: "Missing input" });
     }
   } catch (error) {
-    return res.status(400).json({ error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
   }
 };
 
@@ -58,66 +81,101 @@ exports.updateTicket = async (req, res) => {
 exports.addTicketMessage = async (req, res) => {
   try {
     const ticketId = req.query.ticketId;
-    let ticket_messages = {
-      message: req.body.message,
-      messaged_by: req.user._id,
-    };
-    if (req.file) {
-      const uploader = (path) => cloudinaryUploadImg(path, "images");
-      const newpath = await uploader(req.file.path);
-      ticket_messages.attachments = newpath.url;
-    }
+    if (ticketId) {
+      let ticket_messages = {
+        message: req.body.message,
+        messaged_by: req.user._id,
+      };
+      if (req.file) {
+        const uploader = (path) => cloudinaryUploadImg(path, "images");
+        const newpath = await uploader(req.file.path);
+        ticket_messages.attachments = newpath.url;
+      }
 
-    const postMessage = await Tickets.findByIdAndUpdate(
-      ticketId,
-      {
+      const updatedTicket = await Tickets.findByIdAndUpdate(ticketId, {
         $push: {
           ticket_messages,
         },
-      },
-      {
-        new: true,
+      });
+      if (updatedTicket) {
+        return res.status(200).json({
+          success: true,
+          message: "updated ticket",
+          data: updatedTicket,
+        });
+      } else {
+        return res
+          .status(400)
+          .json({ success: false, message: "could not update ticket" });
       }
-    );
-    return res.status(201).json({ postMessage });
+    } else {
+      return res.status(400).json({ success: false, message: "Missing input" });
+    }
   } catch (error) {
-    return res.status(400).json({ error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
   }
 };
 
-exports.getTickets = (req, res) => {
-  const args = req.user.role == "admin" ? {} : { customer_id: req.user._id };
-  console.log("args " + JSON.stringify(args));
-  Tickets.find(args)
-    .select("type subject status")
-    .exec((error, tickets) => {
-      if (error)
-        return res.status(400).json({
-          error,
-        });
-      if (tickets) {
-        res.status(200).json({ tickets });
-      }
+exports.getTickets = async (req, res) => {
+  try {
+    const args = req.user.role == "admin" ? {} : { customer_id: req.user._id };
+    const showAll = req.query.showAll ? req.query.showAll : false;
+    let findArgs = { args };
+    if (showAll) {
+      findArgs = args;
+    } else {
+      findArgs = { ...args, isActive: true };
+    }
+    const tickets = await Tickets.find(findArgs).select("type subject status");
+    if (tickets) {
+      return res.status(200).json({
+        success: true,
+        message: "fetched tickets",
+        data: tickets,
+      });
+    } else {
+      return res
+        .status(204)
+        .json({ success: true, message: "No result found", data: [] });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
     });
+  }
 };
 
 //TEMP
-exports.getTicketDetails = (req, res) => {
+exports.getTicketDetails = async (req, res) => {
   try {
     if (req.query.ticketId) {
-      Tickets.findOne({ _id: req.query.ticketId }).exec((error, tickets) => {
-        if (error)
-          return res.status(400).json({
-            error,
-          });
-        if (tickets) {
-          res.status(200).json({ tickets });
-        }
-      });
+      const tickets = await Tickets.findById(req.query.ticketId);
+
+      if (tickets) {
+        return res.status(200).json({
+          success: true,
+          message: "fetched ticket details",
+          data: tickets,
+        });
+      } else {
+        return res
+          .status(204)
+          .json({ success: true, message: "No result found", data: [] });
+      }
     } else {
       return res.status(400).json({ message: "Missing ticket Id" });
     }
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
   }
 };

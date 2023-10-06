@@ -50,7 +50,7 @@ Routes
 ********************/
 
 router.post(
-  "/category/add",
+  "/add",
   requireLogin,
   middleware,
   uploadImage.array("categoryImage"),
@@ -59,14 +59,14 @@ router.post(
   addCategory
 );
 //router.get("/category/fetch", fetchCategory);
-router.get("/category/fetch", fetchCategories);
+router.get("/fetch", fetchCategories);
 router.post(
-  "/category/modify",
+  "/modify",
   requireLogin,
   middleware,
   uploadImage.array("categoryImage"),
   modifyCategories
 );
-router.post("/category/delete", requireLogin, middleware, deleteCategories);
+router.delete("/delete", requireLogin, middleware, deleteCategories);
 
 module.exports = router;

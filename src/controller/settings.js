@@ -9,18 +9,26 @@ exports.addSetting = async (req, res) => {
         value: req.body.value,
       };
       const setting = await Settings.create(settingObj);
-      return res
-        .status(201)
-        .json({success:true, mesage: "Setting Created", setting });
+      if (setting) {
+        return res.status(201).json({
+          success: true,
+          message: "Setting Created",
+          data: setting,
+        });
+      } else {
+        return res
+          .status(400)
+          .json({ success: false, message: "could not create setting" });
+      }
     } else {
-      logger.error("addSetting::: ");
-      return res.status(400).json({ error: "missing required inputs" });
+      return res.status(400).json({ success: false, message: "Missing input" });
     }
   } catch (error) {
-    logger.error("addSetting::: " + error.message);
-    return res
-      .status(500)
-      .json({ success:false, mesage: "Something went wrong" });
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
   }
 };
 exports.getAllSettings = async (req, res) => {
@@ -29,16 +37,18 @@ exports.getAllSettings = async (req, res) => {
     if (settings) {
       return res
         .status(201)
-        .json({success:true, mesage: "Setting Fetched", settings });
+        .json({ success: true, message: "Setting Fetched", data: settings });
     } else {
-      logger.error("getAllSettings::: ");
-      return res.status(400).json({ error: "could not fetch Setting" });
+      return res
+        .status(400)
+        .json({ success: false, message: "could not fetch Setting" });
     }
   } catch (error) {
-    logger.error("getAllSettings::: " + error.message);
-    return res
-      .status(500)
-      .json({ success:false, mesage: "Something went wrong" });
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
   }
 };
 exports.getSettingById = async (req, res) => {
@@ -46,22 +56,25 @@ exports.getSettingById = async (req, res) => {
     const id = req.query.id;
     if (!id) {
       logger.error("getSettingById::: ");
-      return res.status(400).json({ error: "missing required inputs" });
+      return res.status(400).json({ success: false, message: "Missing input" });
     }
     const findSetting = await Settings.findById(id);
     if (findSetting) {
       return res
-        .status(201)
-        .json({success:true, mesage: "Setting Fetched", findSetting });
+        .status(200)
+        .json({ success: true, message: "Setting Fetched", data: findSetting });
     } else {
       logger.error("getSettingById::: ");
-      return res.status(400).json({ error: "could not fetch Setting" });
+      return res
+        .status(400)
+        .json({ success: false, message: "could not fetch Setting" });
     }
   } catch (error) {
-    logger.error("getSettingById::: " + error.message);
-    return res
-      .status(500)
-      .json({ success:false, mesage: "Something went wrong" });
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
   }
 };
 /*

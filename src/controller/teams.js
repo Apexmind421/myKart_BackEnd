@@ -35,22 +35,21 @@ exports.getTeams = async (req, res) => {
     }
 
     //2. Filter Team table with filter condition
-    const teams = Teams.find(filter);
+    const teams = await Teams.find(filter);
     if (teams) {
       return res.status(200).json({
-       success:true,
-        mesage: "Fetched teams successfully",
+        success: true,
+        message: "Fetched teams successfully",
         result: teams,
       });
     } else {
       return res
         .status(404)
-        .json({ success:false, mesage: "No Teams available" });
+        .json({ success: false, message: "No Teams available" });
     }
   } catch (error) {
-    console.log("Catch Error for getTeams is::: " + error.message);
     return res
       .status(500)
-      .json({ success:false, mesage: "Something went wrong" });
+      .json({ success: false, message: "Something went wrong" });
   }
 };
